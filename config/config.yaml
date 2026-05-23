@@ -1,0 +1,64 @@
+# Social Media Crawl Service Configuration
+# Environment: LOCAL / TEST / PROD
+
+LOCAL:
+  LLM_CONFIG:
+    API_KEY: "${OPENAI_API_KEY}"
+    API_URL: "https://api.openai.com/v1"
+    MODEL: "gpt-4o-mini"
+    TIMEOUT: 300
+    MAX_TOKEN: 16000
+
+  XHS_CONFIG:
+    cookies: "${XHS_COOKIES}"
+    node_path: "node"
+    search_timeout: 30
+
+  WECHAT_ARTICLE_CONFIG:
+    api_base_url: "https://down.mptext.top"
+    api_key: "${WECHAT_ARTICLE_API_KEY}"
+    timeout: 15
+
+  S3_CONFIG:
+    enabled: false
+    bucket_name: ""
+    region: "us-east-1"
+    log_prefix: "social-media-reports/"
+    access_key_id: "${AWS_ACCESS_KEY_ID}"
+    secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+
+  DINGTALK_CONFIG:
+    webhook_url: "${DINGTALK_WEBHOOK_URL}"
+    secret: "${DINGTALK_SECRET}"
+    timeout: 10
+
+TEST:
+  LLM_CONFIG:
+    API_KEY: "${OPENAI_API_KEY}"
+    API_URL: "https://api.openai.com/v1"
+    MODEL: "gpt-5.4-mini"
+    TIMEOUT: 120
+    MAX_TOKEN: 4000
+
+  XHS_CONFIG:
+    cookies: "${XHS_COOKIES}"
+    node_path: "node"
+    search_timeout: 30
+
+  WECHAT_ARTICLE_CONFIG:
+    api_base_url: "https://down.mptext.top"
+    api_key: "${WECHAT_ARTICLE_API_KEY}"
+    timeout: 15
+
+  S3_CONFIG:
+    enabled: false
+    bucket_name: ""
+    region: "us-east-1"
+    log_prefix: "social-media-reports/"
+    access_key_id: "${AWS_ACCESS_KEY_ID}"
+    secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+
+  DINGTALK_CONFIG:
+    webhook_url: "${DINGTALK_WEBHOOK_URL}"
+    secret: "${DINGTALK_SECRET}"
+    timeout: 10

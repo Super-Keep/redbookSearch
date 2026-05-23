@@ -1,0 +1,2907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小红书内容搜索</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Reset & Base */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Layout Container */
+        .container {
+            max-width: 960px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container.searched {
+            justify-content: flex-start;
+            padding-top: 24px;
+        }
+
+        /* Page Title */
+        .page-title {
+            color: #e2e8f0;
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 24px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container.searched .page-title {
+            font-size: 22px;
+            margin-bottom: 16px;
+        }
+
+        .page-title .title-accent {
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 0;
+            margin-bottom: 16px;
+            background: #252540;
+            border-radius: 12px;
+            padding: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            max-width: 460px;
+            width: 100%;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 16px;
+            min-height: 44px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #94a3b8;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #e2e8f0;
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            width: 100%;
+            max-width: 640px;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container.searched .tab-content {
+            max-width: 100%;
+            align-items: stretch;
+        }
+
+        /* Search Form */
+        .search-form {
+            width: 100%;
+            max-width: 640px;
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container.searched .search-form {
+            max-width: 100%;
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+
+        .search-form .form-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-form .keyword-input {
+            flex: 1;
+            min-width: 200px;
+            height: 44px;
+            padding: 0 16px;
+            border: 1px solid #3d3d5c;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            background: #2d2d4a;
+            color: #e2e8f0;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-form .keyword-input::placeholder { color: #64748b; }
+        .search-form .keyword-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15); }
+        .search-form .keyword-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .search-form select {
+            height: 44px;
+            padding: 0 36px 0 16px;
+            border: 1px solid #3d3d5c;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #2d2d4a;
+            color: #e2e8f0;
+            cursor: pointer;
+            outline: none;
+            min-width: 110px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            transition: border-color 0.2s;
+        }
+
+        .search-form select:focus { border-color: #7c3aed; }
+        .search-form select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .search-form .search-btn {
+            height: 44px;
+            min-width: 100px;
+            padding: 0 24px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: box-shadow 0.2s, opacity 0.2s;
+        }
+
+        .search-form .search-btn:hover { box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); }
+        .search-form .search-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+        .search-form .cancel-btn {
+            height: 44px;
+            min-width: 80px;
+            padding: 0 20px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 12px;
+            color: #f87171;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: none;
+            transition: background 0.2s;
+        }
+
+        .cancel-btn.visible { display: inline-block; }
+        .cancel-btn:hover { background: rgba(239, 68, 68, 0.25); }
+
+        .search-form .form-hint {
+            width: 100%;
+            margin-top: 8px;
+            color: #f87171;
+            font-size: 13px;
+            display: none;
+        }
+
+        .search-form .form-hint.visible { display: block; }
+
+        /* Export Button */
+        .export-btn {
+            height: 36px;
+            padding: 0 16px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            color: #6ee7b7;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: none;
+        }
+
+        .export-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+        .export-btn:hover { background: rgba(16, 185, 129, 0.25); }
+        .export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Results Area */
+        .results-area {
+            width: 100%;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.4s ease 0.3s, max-height 0s;
+        }
+
+        .container.searched .results-area { opacity: 1; max-height: none; overflow: visible; }
+
+        /* Search Meta */
+        .search-meta {
+            display: none;
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #94a3b8;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-meta.visible { display: flex; flex-wrap: wrap; gap: 8px; }
+        .search-meta .meta-left span { margin-right: 16px; }
+        .search-meta .meta-keyword { color: #e2e8f0; font-weight: 500; }
+
+        /* AI Summary Panel */
+        .ai-summary-panel {
+            display: none;
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ai-summary-panel.visible { display: block; }
+
+        /* AI panel slides to left when typing starts */
+        .ai-summary-panel.docked-left {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            width: 340px;
+            height: calc(100vh - 32px);
+            overflow-y: auto;
+            z-index: 100;
+            margin-bottom: 0;
+            border-radius: 16px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+        }
+        .ai-summary-panel.docked-left::-webkit-scrollbar { width: 6px; }
+        .ai-summary-panel.docked-left::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.3); border-radius: 3px; }
+
+        /* Container shifts right when AI panel is docked */
+        .container.searched.ai-docked {
+            margin-left: 372px;
+            margin-right: 16px;
+            max-width: calc(100% - 388px);
+            transition: margin-left 0.5s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ai-summary-panel .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-summary-panel .panel-title .ai-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #94a3b8;
+            font-size: 14px;
+            padding: 8px 0;
+        }
+
+        .ai-loading .pulse-dot {
+            width: 8px; height: 8px;
+            background: #7c3aed;
+            border-radius: 50%;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.4; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+        .ai-summary-panel .summary-content { font-size: 14px; line-height: 1.8; color: #cbd5e1; overflow: hidden; transition: max-height 0.3s ease; }
+        .ai-summary-panel .summary-content.collapsed { max-height: 400px; }
+        .ai-summary-panel .summary-content p { margin-bottom: 8px; }
+        .ai-summary-panel .summary-content ul, .ai-summary-panel .summary-content ol { padding-left: 20px; margin-bottom: 8px; }
+        .ai-summary-panel .summary-content li { margin-bottom: 4px; }
+        .ai-summary-panel .summary-content strong { color: #e2e8f0; }
+
+        .ai-summary-panel .toggle-summary-btn {
+            display: none; margin-top: 12px; padding: 8px 16px; min-height: 44px;
+            background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 8px; color: #a78bfa; font-size: 14px; cursor: pointer;
+        }
+        .ai-summary-panel .toggle-summary-btn:hover { background: rgba(124, 58, 237, 0.2); }
+        .ai-summary-panel .summary-fallback { color: #64748b; font-size: 14px; font-style: italic; }
+
+        .typing-cursor { display: inline-block; width: 2px; height: 16px; background: #7c3aed; margin-left: 2px; animation: blink 0.8s step-end infinite; vertical-align: text-bottom; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Skeleton Loading */
+        .skeleton-cards { display: none; }
+        .skeleton-cards.visible { display: block; }
+        .skeleton-card { background: #252540; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+        .skeleton-line { height: 14px; border-radius: 7px; background: linear-gradient(90deg, #2d2d4a 25%, #3d3d5c 50%, #2d2d4a 75%); background-size: 400px 100%; animation: shimmer 1.5s infinite; margin-bottom: 12px; }
+        .skeleton-line.title { width: 60%; height: 18px; }
+        .skeleton-line.content { width: 100%; }
+        .skeleton-line.content-short { width: 80%; }
+        .skeleton-line.meta { width: 40%; height: 12px; }
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+
+        /* Note Card List */
+        .note-list { display: none; }
+        .note-list.visible { display: block; }
+        .note-list .empty-state { text-align: center; padding: 40px 20px; color: #64748b; font-size: 15px; }
+
+        .note-card {
+            background: #252540; border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px; padding: 20px; margin-bottom: 16px;
+            opacity: 0; transform: translateY(20px); animation: fadeInUp 0.4s ease forwards;
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .note-card .note-title { font-size: 16px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px; line-height: 1.4; }
+        .note-card .note-content { font-size: 14px; color: #94a3b8; line-height: 1.7; margin-bottom: 12px; white-space: pre-wrap; word-break: break-word; }
+        .note-card .toggle-content-btn { display: inline-block; padding: 6px 12px; min-height: 44px; min-width: 44px; line-height: 32px; background: none; border: none; color: #a78bfa; font-size: 13px; cursor: pointer; }
+        .note-card .toggle-content-btn:hover { text-decoration: underline; }
+        .note-card .note-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-size: 13px; color: #64748b; }
+        .note-card .note-author { font-weight: 500; color: #94a3b8; }
+        .note-card .note-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+        .note-card .note-stats span { display: inline-flex; align-items: center; gap: 4px; }
+        .note-card .note-link { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; font-size: 13px; color: #a78bfa; text-decoration: none; border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; transition: background-color 0.2s; }
+        .note-card .note-link:hover { background: rgba(124, 58, 237, 0.15); color: #c4b5fd; }
+
+        /* User Card */
+        .user-card {
+            background: #252540; border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px; padding: 20px; margin-bottom: 12px;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+            cursor: pointer; transition: border-color 0.2s, transform 0.2s;
+            opacity: 0; transform: translateY(20px); animation: fadeInUp 0.4s ease forwards;
+        }
+        .user-card:hover { border-color: rgba(124, 58, 237, 0.4); transform: translateY(-2px); }
+        .user-card .user-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #3d3d5c; flex-shrink: 0; }
+        .user-card .user-info { flex: 1; min-width: 0; }
+        .user-card .user-nickname { font-size: 16px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+        .user-card .user-meta { font-size: 13px; color: #94a3b8; display: flex; gap: 12px; margin-bottom: 4px; }
+        .user-card .user-desc { font-size: 13px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .user-card .user-arrow { color: #64748b; font-size: 20px; flex-shrink: 0; }
+
+        /* Inline num selector on user card */
+        .inline-num-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            width: 100%;
+            flex-basis: 100%;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .inline-num-selector span { white-space: nowrap; }
+        .inline-num-select {
+            height: 32px; padding: 0 28px 0 10px;
+            border: 1px solid #3d3d5c; border-radius: 6px;
+            background: #2d2d4a; color: #e2e8f0; font-size: 13px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 8px center;
+        }
+        .inline-go-btn {
+            height: 32px; padding: 0 16px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            border: none; border-radius: 6px;
+            color: #fff; font-size: 13px; font-weight: 500;
+            cursor: pointer; white-space: nowrap;
+        }
+        .inline-go-btn:hover { box-shadow: 0 0 12px rgba(124, 58, 237, 0.4); }
+
+        /* Back Button */
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; min-height: 44px;
+            background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 8px; color: #a78bfa; font-size: 14px; cursor: pointer;
+            margin-bottom: 16px; transition: background 0.2s;
+        }
+        .back-btn:hover { background: rgba(124, 58, 237, 0.2); }
+
+        /* User Header */
+        .user-header {
+            background: #252540; border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px; padding: 20px; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 16px;
+        }
+        .user-header .user-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #3d3d5c; }
+        .user-header .user-info { flex: 1; }
+        .user-header .user-nickname { font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+        .user-header .user-meta { font-size: 13px; color: #94a3b8; }
+
+        /* User List */
+        .user-list { display: none; }
+        .user-list.visible { display: block; }
+
+        /* Error Toast */
+        .error-toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); max-width: 90%; width: 500px; background: #252540; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4); border-left: 4px solid #ef4444; padding: 14px 20px; z-index: 1000; animation: slideDown 0.3s ease; }
+        .error-toast.visible { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .error-toast.fade-out { animation: fadeOut 0.3s ease forwards; }
+        @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .error-toast .error-message { flex: 1; font-size: 14px; color: #e2e8f0; }
+        .error-toast .error-close { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 18px; color: #64748b; cursor: pointer; }
+        .error-toast .error-close:hover { color: #e2e8f0; }
+
+        /* Article Detail Sidebar */
+        .article-sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 900;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .article-sidebar-overlay.visible { display: block; opacity: 1; }
+
+        .article-sidebar {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: 55%;
+            max-width: 720px;
+            min-width: 380px;
+            background: #1e1e38;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 950;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+        }
+        .article-sidebar.open { transform: translateX(0); }
+
+        .article-sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            flex-shrink: 0;
+        }
+        .article-sidebar-header .sidebar-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            margin-right: 12px;
+        }
+        .article-sidebar-header .sidebar-close-btn {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #94a3b8;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+        .article-sidebar-header .sidebar-close-btn:hover { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        .article-sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+        }
+        .article-sidebar-body::-webkit-scrollbar { width: 8px; }
+        .article-sidebar-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 4px; }
+        .article-sidebar-body::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.4); border-radius: 4px; }
+        .article-sidebar-body::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.6); }
+
+        .article-sidebar-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #64748b;
+            flex-wrap: wrap;
+        }
+        .article-sidebar-meta .meta-author { color: #94a3b8; font-weight: 500; }
+        .article-sidebar-meta a {
+            color: #a78bfa;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .article-sidebar-meta a:hover { text-decoration: underline; }
+
+        .article-sidebar-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .sidebar-action-btn {
+            height: 38px;
+            padding: 0 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            border: none;
+        }
+        .sidebar-action-btn.primary {
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+        }
+        .sidebar-action-btn.primary:hover { box-shadow: 0 0 16px rgba(124, 58, 237, 0.4); }
+        .sidebar-action-btn.primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+        .sidebar-action-btn.secondary {
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            color: #a78bfa;
+        }
+        .sidebar-action-btn.secondary:hover { background: rgba(124, 58, 237, 0.2); }
+
+        .article-content-area {
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .article-content-area .content-loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #94a3b8;
+            font-size: 14px;
+            padding: 20px 0;
+        }
+        .article-content-area .content-loading .pulse-dot {
+            width: 8px; height: 8px;
+            background: #7c3aed;
+            border-radius: 50%;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        .article-content-area .markdown-body {
+            font-size: 14px;
+            line-height: 1.9;
+            color: #cbd5e1;
+        }
+        .article-content-area .markdown-body h1,
+        .article-content-area .markdown-body h2,
+        .article-content-area .markdown-body h3 {
+            color: #e2e8f0;
+            margin: 20px 0 10px;
+            font-weight: 600;
+        }
+        .article-content-area .markdown-body h1 { font-size: 20px; }
+        .article-content-area .markdown-body h2 { font-size: 17px; }
+        .article-content-area .markdown-body h3 { font-size: 15px; }
+        .article-content-area .markdown-body p { margin-bottom: 12px; }
+        .article-content-area .markdown-body ul,
+        .article-content-area .markdown-body ol { padding-left: 20px; margin-bottom: 12px; }
+        .article-content-area .markdown-body li { margin-bottom: 6px; }
+        .article-content-area .markdown-body strong { color: #e2e8f0; }
+        .article-content-area .markdown-body blockquote {
+            border-left: 3px solid #7c3aed;
+            padding-left: 16px;
+            margin: 12px 0;
+            color: #94a3b8;
+            font-style: italic;
+        }
+        .article-content-area .markdown-body code {
+            background: rgba(124, 58, 237, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #c4b5fd;
+        }
+        .article-content-area .markdown-body pre {
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+        .article-content-area .markdown-body pre code {
+            background: none;
+            padding: 0;
+            color: #cbd5e1;
+        }
+        .article-content-area .markdown-body img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 12px 0;
+            display: block;
+            background: #2d2d4a;
+        }
+        .article-content-area .markdown-body img[src=""] ,
+        .article-content-area .markdown-body img:not([src]) {
+            display: none;
+        }
+        .article-content-area .markdown-body a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+        .article-content-area .markdown-body a:hover { text-decoration: underline; }
+        .article-content-area .markdown-body section,
+        .article-content-area .markdown-body div,
+        .article-content-area .markdown-body span,
+        .article-content-area .markdown-body figure,
+        .article-content-area .markdown-body table {
+            background: transparent !important;
+            color: inherit;
+            max-width: 100%;
+        }
+        .article-content-area .content-error {
+            color: #f87171;
+            font-size: 14px;
+            padding: 12px 0;
+        }
+
+        /* AI Deep Analysis Section in Sidebar */
+        .sidebar-ai-section {
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .sidebar-ai-section .ai-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-ai-section .ai-section-title .ai-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px; height: 22px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        .sidebar-ai-section .ai-analysis-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #cbd5e1;
+        }
+        .sidebar-ai-section .ai-analysis-content p { margin-bottom: 8px; }
+        .sidebar-ai-section .ai-analysis-content ul,
+        .sidebar-ai-section .ai-analysis-content ol { padding-left: 20px; margin-bottom: 8px; }
+        .sidebar-ai-section .ai-analysis-content li { margin-bottom: 4px; }
+        .sidebar-ai-section .ai-analysis-content strong { color: #e2e8f0; }
+        .sidebar-ai-section .ai-analysis-content.collapsed {
+            max-height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+        .sidebar-ai-section .ai-analysis-content.collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 60px;
+            background: linear-gradient(transparent, #252540);
+            pointer-events: none;
+        }
+        .sidebar-ai-toggle-btn {
+            display: none;
+            margin-top: 12px;
+            padding: 8px 18px;
+            min-height: 38px;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 8px;
+            color: #a78bfa;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .sidebar-ai-toggle-btn:hover { background: rgba(124, 58, 237, 0.2); }
+
+        /* Container shift when sidebar is open */
+        body.sidebar-open .container {
+            max-width: 45%;
+            margin-left: 0;
+            margin-right: auto;
+            padding-left: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Make article cards clickable */
+        .note-card.clickable {
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        .note-card.clickable:hover {
+            border-color: rgba(124, 58, 237, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(124, 58, 237, 0.1);
+        }
+        .note-card.clickable.active {
+            border-color: rgba(124, 58, 237, 0.6);
+            background: rgba(124, 58, 237, 0.05);
+        }
+
+        /* XHS Media in Sidebar */
+        .sidebar-media-area {
+            margin-bottom: 20px;
+        }
+        .sidebar-media-area video {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            background: #1a1a2e;
+            margin-bottom: 12px;
+        }
+        .sidebar-media-area .video-cover-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .sidebar-media-area .video-cover {
+            width: 100%;
+            display: block;
+            border-radius: 12px;
+        }
+        .sidebar-media-area .video-play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        .sidebar-media-area .video-hint {
+            color: #64748b;
+            font-size: 13px;
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+        .sidebar-media-area .xhs-image-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .sidebar-media-area .xhs-image-list img {
+            width: 100%;
+            border-radius: 10px;
+            background: #2d2d4a;
+            display: block;
+        }
+        .sidebar-media-area .video-error,
+        .sidebar-media-area .image-error {
+            color: #64748b;
+            font-size: 13px;
+            font-style: italic;
+            padding: 8px 0;
+        }
+        .sidebar-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .sidebar-tags .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 12px;
+            font-size: 12px;
+            color: #a78bfa;
+        }
+        .sidebar-text-content {
+            font-size: 14px;
+            line-height: 1.9;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 767px) {
+            .container { padding: 16px 12px; }
+            .page-title { font-size: 24px; margin-bottom: 16px; }
+            .container.searched .page-title { font-size: 18px; }
+            .search-form { padding: 16px; }
+            .search-form .form-row { flex-direction: column; align-items: stretch; }
+            .search-form .keyword-input { min-width: unset; width: 100%; }
+            .search-form select { width: 100%; }
+            .search-form .search-btn { width: 100%; }
+            .note-card { padding: 16px; }
+            .note-card .note-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .user-card { flex-direction: column; text-align: center; }
+            .user-card .user-desc { white-space: normal; }
+            /* Sidebar mobile: full width */
+            .article-sidebar { width: 100%; min-width: unset; max-width: unset; }
+            body.sidebar-open .container { max-width: 100%; margin: 0 auto; padding: 16px 12px; display: none; }
+            /* Disable AI docking on mobile */
+            .ai-summary-panel.docked-left { position: static; width: 100%; max-width: 100%; height: auto; overflow-y: visible; }
+            .container.searched.ai-docked { margin-left: auto; margin-right: auto; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="appContainer">
+        <h1 class="page-title"><span class="title-accent">内容</span>情报搜索</h1>
+        <button class="settings-btn-fixed" onclick="openSettingsModal()" title="设置">⚙️ 设置</button>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" id="tabNoteBtn" onclick="switchTab('note')">小红书·笔记</button>
+            <button class="tab-btn" id="tabUserBtn" onclick="switchTab('user')">小红书·用户</button>
+            <button class="tab-btn" id="tabWechatBtn" onclick="switchTab('wechat')">微信公众号</button>
+        </div>
+
+        <!-- Note Search Tab -->
+        <div class="tab-content active" id="tabNote">
+            <div class="search-form" id="searchForm">
+                <div class="form-row">
+                    <input type="text" class="keyword-input" id="keywordInput" placeholder="输入搜索关键词..." maxlength="100">
+                    <select id="sortSelect">
+                        <option value="general">综合排序</option>
+                        <option value="hot">热门排序</option>
+                        <option value="latest">最新排序</option>
+                    </select>
+                    <select id="numSelect">
+                        <option value="5">5 条</option>
+                        <option value="10">10 条</option>
+                        <option value="20" selected>20 条</option>
+                        <option value="30">30 条</option>
+                        <option value="50">50 条</option>
+                    </select>
+                    <button type="button" class="search-btn" id="searchBtn">搜索</button>
+                    <button type="button" class="cancel-btn" id="noteCancelBtn" onclick="cancelNoteSearch()">取消</button>
+                </div>
+                <div class="form-hint" id="formHint">请输入搜索关键词</div>
+            </div>
+
+            <div class="results-area" id="resultsArea">
+                <div class="search-meta" id="searchMeta">
+                    <div class="meta-left">
+                        <span class="meta-keyword" id="metaKeyword"></span>
+                        <span id="metaSort"></span>
+                        <span id="metaNoteCount"></span>
+                        <span id="metaDuration"></span>
+                    </div>
+                    <button class="export-btn" id="noteExportBtn" onclick="exportNoteCSV()">📦 导出 ZIP</button>
+                </div>
+
+                <div class="ai-summary-panel" id="aiSummaryPanel">
+                    <div class="panel-title"><span class="ai-icon">✨</span> AI 智能总结</div>
+                    <!-- Progress bar inside AI panel -->
+                    <div class="export-progress" id="searchProgress">
+                        <div class="progress-bar"><div class="progress-fill" id="searchProgressFill"></div></div>
+                        <span class="progress-text" id="searchProgressText">准备中...</span>
+                    </div>
+                    <div class="ai-loading" id="aiLoading" style="display:none"><span class="pulse-dot"></span><span>AI 正在分析...</span></div>
+                    <div class="summary-content" id="summaryContent"></div>
+                    <button type="button" class="toggle-summary-btn" id="toggleSummaryBtn">展开全文</button>
+                </div>
+
+                <div class="skeleton-cards" id="skeletonCards">
+                    <div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line content-short"></div><div class="skeleton-line meta"></div></div>
+                    <div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line content-short"></div><div class="skeleton-line meta"></div></div>
+                    <div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line content-short"></div><div class="skeleton-line meta"></div></div>
+                </div>
+
+                <div class="note-list" id="noteList"></div>
+            </div>
+        </div>
+
+        <!-- User Search Tab -->
+        <div class="tab-content" id="tabUser">
+            <div class="search-form" id="userSearchForm">
+                <div class="form-row">
+                    <input type="text" class="keyword-input" id="userKeywordInput" placeholder="输入用户名或用户ID..." maxlength="100">
+                    <select id="userNumSelect">
+                        <option value="5">5 个</option>
+                        <option value="10">10 个</option>
+                        <option value="15" selected>15 个</option>
+                        <option value="30">30 个</option>
+                    </select>
+                    <button type="button" class="search-btn" id="userSearchBtn">搜索用户</button>
+                    <button type="button" class="cancel-btn" id="userCancelBtn" onclick="cancelUserSearch()">取消</button>
+                </div>
+                <div class="form-hint" id="userFormHint">请输入用户名或用户ID</div>
+            </div>
+
+            <!-- User Search Results -->
+            <div class="results-area" id="userResultsArea">
+                <div class="user-list" id="userList"></div>
+
+                <!-- User Notes View (hidden by default) -->
+                <div id="userNotesView" style="display:none;">
+                    <button class="back-btn" onclick="backToUserList()">← 返回用户列表</button>
+                    <div class="user-header" id="userNotesHeader"></div>
+                    <div class="search-meta visible" id="userNotesMeta" style="display:none;">
+                        <div class="meta-left"><span id="userNotesCount"></span></div>
+                        <button class="export-btn" id="userExportBtn" onclick="exportUserCSV()">📦 导出 ZIP</button>
+                    </div>
+                    <div class="ai-summary-panel" id="userAiPanel">
+                        <div class="panel-title"><span class="ai-icon">✨</span> AI 智能总结</div>
+                        <!-- Progress bar for user notes -->
+                        <div class="export-progress" id="userNotesProgress">
+                            <div class="progress-bar"><div class="progress-fill" id="userNotesProgressFill"></div></div>
+                            <span class="progress-text" id="userNotesProgressText">准备中...</span>
+                        </div>
+                        <div class="ai-loading" id="userAiLoading" style="display:none"><span class="pulse-dot"></span><span>AI 正在分析...</span></div>
+                        <div class="summary-content" id="userSummaryContent"></div>
+                        <button type="button" class="toggle-summary-btn" id="userToggleSummaryBtn">展开全文</button>
+                    </div>
+                    <div class="skeleton-cards" id="userSkeletonCards">
+                        <div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line content-short"></div><div class="skeleton-line meta"></div></div>
+                        <div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line content-short"></div><div class="skeleton-line meta"></div></div>
+                    </div>
+                    <div class="note-list" id="userNoteList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WeChat Tab -->
+        <div class="tab-content" id="tabWechat">
+            <div class="search-form" id="wechatSearchForm">
+                <div class="form-row">
+                    <input type="text" class="keyword-input" id="wechatKeywordInput" placeholder="输入公众号名称..." maxlength="100">
+                    <button type="button" class="search-btn" id="wechatSearchBtn">搜索公众号</button>
+                </div>
+                <div class="form-hint" id="wechatFormHint">请输入公众号名称</div>
+            </div>
+
+            <div class="results-area" id="wechatResultsArea">
+                <!-- Account list -->
+                <div class="user-list" id="wechatAccountList"></div>
+
+                <!-- Article list view -->
+                <div id="wechatArticleView" style="display:none;">
+                    <button class="back-btn" onclick="backToAccountList()">← 返回公众号列表</button>
+                    <div class="user-header" id="wechatAccountHeader"></div>
+                    <div class="search-form" style="padding:12px 16px;margin-bottom:12px;">
+                        <div class="form-row">
+                            <input type="text" class="keyword-input" id="wechatArticleKeyword" placeholder="按标题关键词筛选..." maxlength="50">
+                            <button type="button" class="search-btn" id="wechatArticleFilterBtn" onclick="filterWechatArticles()">筛选</button>
+                            <button class="export-btn visible" onclick="exportWechatCSV()">📦 导出 ZIP</button>
+                        </div>
+                    </div>
+                    <!-- AI Summary for WeChat -->
+                    <div class="ai-summary-panel" id="wechatAiPanel" style="display:none;">
+                        <div class="panel-title"><span class="ai-icon">✨</span> AI 智能总结</div>
+                        <!-- Progress bar for WeChat articles -->
+                        <div class="export-progress" id="wechatArticleProgress">
+                            <div class="progress-bar"><div class="progress-fill" id="wechatArticleProgressFill"></div></div>
+                            <span class="progress-text" id="wechatArticleProgressText">加载中...</span>
+                        </div>
+                        <div class="ai-loading" id="wechatAiLoading" style="display:none"><span class="pulse-dot"></span><span>AI 正在分析...</span></div>
+                        <div class="summary-content" id="wechatSummaryContent"></div>
+                    </div>
+                    <div class="note-list" id="wechatArticleList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Toast -->
+        <div class="error-toast" id="errorToast">
+            <span class="error-message" id="errorMessage"></span>
+            <button type="button" class="error-close" id="errorClose">&times;</button>
+        </div>
+    </div>
+
+    <!-- Article Detail Sidebar (outside container for fixed positioning) -->
+    <div class="article-sidebar-overlay" id="articleSidebarOverlay" onclick="closeArticleSidebar()"></div>
+    <div class="article-sidebar" id="articleSidebar">
+        <div class="article-sidebar-header">
+            <span class="sidebar-title" id="sidebarArticleTitle">文章详情</span>
+            <button class="sidebar-close-btn" onclick="closeArticleSidebar()" title="关闭">&times;</button>
+        </div>
+        <div class="article-sidebar-body" id="sidebarBody">
+            <div class="article-sidebar-meta" id="sidebarArticleMeta"></div>
+            <div class="article-sidebar-actions">
+                <button class="sidebar-action-btn primary" id="sidebarAiBtn" onclick="deepAnalyzeArticle()">
+                    <span>🧠</span> AI 深度分析
+                </button>
+                <a class="sidebar-action-btn secondary" id="sidebarOriginalLink" href="#" target="_blank" rel="noopener noreferrer">
+                    <span>🔗</span> 查看原文
+                </a>
+            </div>
+            <!-- AI Deep Analysis Section -->
+            <div class="sidebar-ai-section" id="sidebarAiSection" style="display:none;">
+                <div class="ai-section-title"><span class="ai-badge">✨</span> AI 深度分析</div>
+                <div class="ai-loading" id="sidebarAiLoading" style="display:none"><span class="pulse-dot"></span><span>AI 正在深度分析全文...</span></div>
+                <div class="ai-analysis-content" id="sidebarAiContent"></div>
+                <button type="button" class="sidebar-ai-toggle-btn" id="sidebarAiToggleBtn" style="display:none;" onclick="toggleSidebarAi()">收起分析 ↑</button>
+            </div>
+            <!-- Article Full Content -->
+            <div class="article-content-area" id="sidebarContentArea">
+                <div class="content-loading" id="sidebarContentLoading">
+                    <span class="pulse-dot"></span><span>正在加载文章全文...</span>
+                </div>
+                <div class="markdown-body" id="sidebarMarkdownContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === State ===
+        const state = {
+            loading: false,
+            searched: false,
+            results: null,
+            typingTimer: null,
+            noteAbortController: null,
+            // User search state
+            userLoading: false,
+            userSearched: false,
+            userResults: null,
+            currentUserNotes: null,
+            currentUserId: '',
+            currentUserXsecToken: '',
+            userTypingTimer: null,
+            userAbortController: null,
+            userNotesAbortController: null,
+            exportAbortController: null
+        };
+
+        const SORT_NAMES = { general: '综合排序', hot: '热门排序', latest: '最新排序' };
+
+        // === Tab Switching ===
+        function switchTab(tab) {
+            undockAiPanel();
+            document.getElementById('tabNote').classList.toggle('active', tab === 'note');
+            document.getElementById('tabUser').classList.toggle('active', tab === 'user');
+            document.getElementById('tabWechat').classList.toggle('active', tab === 'wechat');
+            document.getElementById('tabNoteBtn').classList.toggle('active', tab === 'note');
+            document.getElementById('tabUserBtn').classList.toggle('active', tab === 'user');
+            document.getElementById('tabWechatBtn').classList.toggle('active', tab === 'wechat');
+
+            // Re-dock AI panel if switching back to a tab that already has AI summary
+            if (tab === 'note' && window.innerWidth > 767) {
+                var panel = document.getElementById('aiSummaryPanel');
+                var content = document.getElementById('summaryContent');
+                if (panel && panel.classList.contains('visible') && content && content.innerHTML.trim()) {
+                    panel.classList.add('docked-left');
+                    document.getElementById('appContainer').classList.add('ai-docked');
+                }
+            } else if (tab === 'user' && window.innerWidth > 767) {
+                var panel = document.getElementById('userAiPanel');
+                var content = panel ? panel.querySelector('.summary-content') : null;
+                if (panel && panel.classList.contains('visible') && content && content.innerHTML.trim()) {
+                    panel.classList.add('docked-left');
+                    document.getElementById('appContainer').classList.add('ai-docked');
+                }
+            }
+        }
+
+        // === Layout Transition ===
+        function enterSearchedState() {
+            if (!state.searched) {
+                state.searched = true;
+                document.getElementById('appContainer').classList.add('searched');
+            }
+        }
+
+        // =============================================
+        // NOTE SEARCH (existing functionality)
+        // =============================================
+
+        function setNoteLoading(isLoading) {
+            state.loading = isLoading;
+            document.getElementById('searchBtn').disabled = isLoading;
+            document.getElementById('searchBtn').style.display = isLoading ? 'none' : '';
+            document.getElementById('noteCancelBtn').classList.toggle('visible', isLoading);
+            document.getElementById('keywordInput').disabled = isLoading;
+            document.getElementById('sortSelect').disabled = isLoading;
+            document.getElementById('numSelect').disabled = isLoading;
+
+            if (isLoading) {
+                // Undock AI panel from previous search
+                undockAiPanel();
+                // Hide previous results meta
+                document.getElementById('searchMeta').classList.remove('visible');
+                // Show AI panel with progress inside it
+                document.getElementById('aiSummaryPanel').classList.add('visible');
+                document.getElementById('summaryContent').innerHTML = '';
+                document.getElementById('toggleSummaryBtn').style.display = 'none';
+                document.getElementById('searchProgress').classList.add('visible');
+                // Hide notes
+                document.getElementById('noteList').classList.remove('visible');
+                document.getElementById('noteList').innerHTML = '';
+                document.getElementById('noteExportBtn').classList.remove('visible');
+            } else {
+                document.getElementById('searchProgress').classList.remove('visible');
+            }
+        }
+
+        function undockAiPanel() {
+            document.querySelectorAll('.ai-summary-panel.docked-left').forEach(function(p) {
+                p.classList.remove('docked-left');
+            });
+            document.getElementById('appContainer').classList.remove('ai-docked');
+        }
+
+        async function doNoteSearch(keyword, sort, num) {
+            enterSearchedState();
+            setNoteLoading(true);
+            const startTime = performance.now();
+
+            // Show progress bar
+            const progressEl = document.getElementById('searchProgress');
+            const progressFill = document.getElementById('searchProgressFill');
+            const progressText = document.getElementById('searchProgressText');
+            progressEl.classList.add('visible');
+            progressFill.style.width = '5%';
+            progressText.textContent = '正在搜索...';
+
+            // Create abort controller
+            if (state.noteAbortController) state.noteAbortController.abort();
+            state.noteAbortController = new AbortController();
+
+            try {
+                const response = await fetch('/api/xhs/search/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword, num: parseInt(num), sort }),
+                    signal: state.noteAbortController.signal
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    setNoteLoading(false);
+                    progressEl.classList.remove('visible');
+                    showError(err.message || '搜索服务异常');
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let finalData = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event = JSON.parse(line.slice(6));
+
+                                if (event.stage === 'searching') {
+                                    progressFill.style.width = '15%';
+                                    progressText.textContent = event.message;
+                                } else if (event.stage === 'enriching') {
+                                    const pct = 20 + (event.current / event.total) * 60;
+                                    progressFill.style.width = pct + '%';
+                                    progressText.textContent = event.message;
+                                } else if (event.stage === 'analyzing') {
+                                    progressFill.style.width = '85%';
+                                    progressText.textContent = event.message;
+                                } else if (event.stage === 'done') {
+                                    progressFill.style.width = '100%';
+                                    progressText.textContent = '';
+                                    finalData = event.data;
+                                } else if (event.stage === 'error') {
+                                    setNoteLoading(false);
+                                    progressEl.classList.remove('visible');
+                                    showError(event.message);
+                                    return;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                // Hide progress immediately
+                document.getElementById('searchProgress').classList.remove('visible');
+
+                if (finalData) {
+                    const duration = performance.now() - startTime;
+                    setNoteLoading(false);
+                    // Step 1: AI typing effect
+                    renderAISummaryTyping(finalData.ai_summary, 'summaryContent', 'toggleSummaryBtn');
+                    // Step 2: Show meta
+                    const meta = document.getElementById('searchMeta');
+                    meta.classList.add('visible');
+                    document.getElementById('metaKeyword').textContent = '搜索: ' + finalData.keyword;
+                    document.getElementById('metaSort').textContent = SORT_NAMES[finalData.sort] || finalData.sort;
+                    document.getElementById('metaNoteCount').textContent = '共 ' + finalData.note_count + ' 篇笔记';
+                    document.getElementById('metaDuration').textContent = '耗时 ' + (duration / 1000).toFixed(2) + ' 秒';
+                    if (finalData.notes && finalData.notes.length > 0) {
+                        document.getElementById('noteExportBtn').classList.add('visible');
+                    }
+                    // Step 3: Show notes after a short delay (let AI typing start first)
+                    setTimeout(function() {
+                        renderNoteCards(finalData.notes, 'noteList');
+                    }, 500);
+                    state.results = finalData;
+                } else {
+                    setNoteLoading(false);
+                    showError('搜索未返回结果');
+                }
+
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    progressEl.classList.remove('visible');
+                    return;
+                }
+                setNoteLoading(false);
+                progressEl.classList.remove('visible');
+                showError('网络连接异常，请检查网络后重试');
+            }
+        }
+
+        function renderNoteResults(data, duration) {
+            const meta = document.getElementById('searchMeta');
+            meta.classList.add('visible');
+            document.getElementById('metaKeyword').textContent = '搜索: ' + data.keyword;
+            document.getElementById('metaSort').textContent = SORT_NAMES[data.sort] || data.sort;
+            document.getElementById('metaNoteCount').textContent = '共 ' + data.note_count + ' 篇笔记';
+            document.getElementById('metaDuration').textContent = '耗时 ' + (duration / 1000).toFixed(2) + ' 秒';
+
+            // Show export button
+            if (data.notes && data.notes.length > 0) {
+                document.getElementById('noteExportBtn').classList.add('visible');
+            }
+
+            renderAISummaryTyping(data.ai_summary, 'summaryContent', 'toggleSummaryBtn');
+            renderNoteCards(data.notes, 'noteList');
+            state.results = data;
+        }
+
+        function handleNoteSearch() {
+            const keyword = document.getElementById('keywordInput').value.trim();
+            if (!keyword) {
+                document.getElementById('formHint').classList.add('visible');
+                return;
+            }
+            document.getElementById('formHint').classList.remove('visible');
+            doNoteSearch(keyword, document.getElementById('sortSelect').value, document.getElementById('numSelect').value);
+        }
+
+        document.getElementById('searchBtn').addEventListener('click', handleNoteSearch);
+        document.getElementById('keywordInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleNoteSearch(); });
+        document.getElementById('keywordInput').addEventListener('input', function() { document.getElementById('formHint').classList.remove('visible'); });
+
+        function cancelNoteSearch() {
+            if (state.noteAbortController) {
+                state.noteAbortController.abort();
+                state.noteAbortController = null;
+            }
+            setNoteLoading(false);
+        }
+
+        // =============================================
+        // USER SEARCH
+        // =============================================
+
+        function setUserLoading(isLoading) {
+            state.userLoading = isLoading;
+            document.getElementById('userSearchBtn').disabled = isLoading;
+            document.getElementById('userSearchBtn').style.display = isLoading ? 'none' : '';
+            document.getElementById('userCancelBtn').classList.toggle('visible', isLoading);
+            document.getElementById('userKeywordInput').disabled = isLoading;
+            document.getElementById('userNumSelect').disabled = isLoading;
+        }
+
+        async function doUserSearch(keyword, num) {
+            enterSearchedState();
+            setUserLoading(true);
+            document.getElementById('userList').classList.remove('visible');
+            document.getElementById('userList').innerHTML = '<div class="skeleton-cards visible"><div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line meta"></div></div><div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div><div class="skeleton-line meta"></div></div></div>';
+            document.getElementById('userList').classList.add('visible');
+            document.getElementById('userNotesView').style.display = 'none';
+
+            if (state.userAbortController) state.userAbortController.abort();
+            state.userAbortController = new AbortController();
+
+            try {
+                const response = await fetch('/api/xhs/search/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword, num: parseInt(num) }),
+                    signal: state.userAbortController.signal
+                });
+
+                setUserLoading(false);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderUserResults(data.data);
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    document.getElementById('userList').innerHTML = '';
+                    showError(data.message || '用户搜索失败');
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                setUserLoading(false);
+                document.getElementById('userList').innerHTML = '';
+                showError('网络连接异常，请检查网络后重试');
+            }
+        }
+
+        function renderUserResults(data) {
+            const userList = document.getElementById('userList');
+            userList.classList.add('visible');
+            state.userResults = data;
+
+            if (!data.users || data.users.length === 0) {
+                userList.innerHTML = '<div class="empty-state">未找到匹配用户，请尝试其他关键词</div>';
+                return;
+            }
+
+            let html = '';
+            if (data.match_type === 'id') {
+                html += '<div style="margin-bottom:12px;font-size:13px;color:#94a3b8;">✅ 已通过用户ID直接匹配</div>';
+            }
+
+            data.users.forEach(function(user, index) {
+                const avatar = user.avatar || '';
+                const nickname = user.nickname || user.red_id || user.user_id || '未知用户';
+                const desc = user.desc || '暂无简介';
+                const fans = user.fans ? formatNumber(user.fans) : '-';
+                const userId = user.user_id || '';
+                const xsecToken = user.xsec_token || '';
+
+                html += '<div class="user-card" style="animation-delay:' + (index * 0.1) + 's" data-userid="' + escapeHtml(userId) + '" data-xsec="' + escapeHtml(xsecToken) + '" data-nickname="' + escapeHtml(nickname) + '" data-avatar="' + escapeHtml(avatar) + '" onclick="handleUserCardClick(this)">';
+                html += '<img class="user-avatar" src="' + escapeHtml(avatar) + '" alt="" onerror="this.style.display=\'none\'">';
+                html += '<div class="user-info">';
+                html += '<div class="user-nickname">' + escapeHtml(nickname) + '</div>';
+                html += '<div class="user-meta"><span>粉丝 ' + fans + '</span>';
+                if (user.red_id) html += '<span>小红书号: ' + escapeHtml(user.red_id) + '</span>';
+                html += '</div>';
+                html += '<div class="user-desc">' + escapeHtml(desc) + '</div>';
+                html += '</div>';
+                html += '<span class="user-arrow">›</span>';
+                html += '</div>';
+            });
+
+            userList.innerHTML = html;
+        }
+
+        async function loadUserNotes(userId, xsecToken, nickname, avatar, num) {
+            state.currentUserId = userId;
+            state.currentUserXsecToken = xsecToken;
+            num = num || 20;
+            if (num < 5) num = 5;
+
+            // Hide user list, show notes view
+            document.getElementById('userList').classList.remove('visible');
+            document.getElementById('userNotesView').style.display = 'block';
+
+            // Set user header
+            document.getElementById('userNotesHeader').innerHTML =
+                '<img class="user-avatar" src="' + avatar + '" alt="" onerror="this.style.display=\'none\'">' +
+                '<div class="user-info"><div class="user-nickname">' + nickname + '</div><div class="user-meta">加载笔记中...</div></div>';
+
+            // Show AI panel with progress bar
+            document.getElementById('userAiPanel').classList.add('visible');
+            document.getElementById('userAiLoading').style.display = 'none';
+            document.getElementById('userSummaryContent').innerHTML = '';
+            document.getElementById('userToggleSummaryBtn').style.display = 'none';
+            document.getElementById('userSkeletonCards').classList.add('visible');
+            document.getElementById('userNoteList').classList.remove('visible');
+            document.getElementById('userNoteList').innerHTML = '';
+            document.getElementById('userNotesMeta').style.display = 'none';
+            document.getElementById('userExportBtn').classList.remove('visible');
+
+            // Show progress bar
+            var progressEl = document.getElementById('userNotesProgress');
+            var progressFill = document.getElementById('userNotesProgressFill');
+            var progressText = document.getElementById('userNotesProgressText');
+            progressEl.classList.add('visible');
+            progressFill.style.width = '5%';
+            progressText.textContent = '正在获取用户笔记...';
+
+            // Abort previous request if any
+            if (state.userNotesAbortController) state.userNotesAbortController.abort();
+            state.userNotesAbortController = new AbortController();
+
+            try {
+                const response = await fetch('/api/xhs/user/notes/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, xsec_token: xsecToken, num: num }),
+                    signal: state.userNotesAbortController.signal
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(function() { return {}; });
+                    progressEl.classList.remove('visible');
+                    document.getElementById('userSkeletonCards').classList.remove('visible');
+                    showError(err.message || '获取用户笔记失败');
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                var buffer = '';
+                var finalData = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (var li = 0; li < lines.length; li++) {
+                        var line = lines[li];
+                        if (line.startsWith('data: ')) {
+                            try {
+                                var event = JSON.parse(line.slice(6));
+
+                                if (event.stage === 'fetching') {
+                                    progressFill.style.width = '15%';
+                                    progressText.textContent = event.message;
+                                } else if (event.stage === 'enriching') {
+                                    var pct = 20 + (event.current / event.total) * 60;
+                                    progressFill.style.width = pct + '%';
+                                    progressText.textContent = event.message;
+                                } else if (event.stage === 'analyzing') {
+                                    progressFill.style.width = '85%';
+                                    progressText.textContent = event.message;
+                                } else if (event.stage === 'done') {
+                                    progressFill.style.width = '100%';
+                                    progressText.textContent = '';
+                                    finalData = event.data;
+                                } else if (event.stage === 'error') {
+                                    progressEl.classList.remove('visible');
+                                    document.getElementById('userSkeletonCards').classList.remove('visible');
+                                    showError(event.message);
+                                    return;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                // Hide progress
+                progressEl.classList.remove('visible');
+                document.getElementById('userSkeletonCards').classList.remove('visible');
+
+                if (finalData) {
+                    renderUserNotes(finalData, nickname);
+                } else {
+                    showError('获取用户笔记未返回结果');
+                }
+
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    progressEl.classList.remove('visible');
+                    return;
+                }
+                progressEl.classList.remove('visible');
+                document.getElementById('userSkeletonCards').classList.remove('visible');
+                showError('网络连接异常');
+            }
+        }
+
+        function renderUserNotes(data, nickname) {
+            state.currentUserNotes = data;
+
+            // Update header
+            document.getElementById('userNotesHeader').querySelector('.user-meta').textContent = '共 ' + data.note_count + ' 篇笔记';
+
+            // Show meta with export
+            document.getElementById('userNotesMeta').style.display = 'flex';
+            document.getElementById('userNotesCount').textContent = '共 ' + data.note_count + ' 篇笔记';
+            if (data.notes && data.notes.length > 0) {
+                document.getElementById('userExportBtn').classList.add('visible');
+            }
+
+            // AI summary
+            renderAISummaryTyping(data.ai_summary, 'userSummaryContent', 'userToggleSummaryBtn');
+
+            // Notes
+            renderNoteCards(data.notes, 'userNoteList');
+        }
+
+        function backToUserList() {
+            document.getElementById('userNotesView').style.display = 'none';
+            document.getElementById('userList').classList.add('visible');
+        }
+
+        function handleUserCardClick(el) {
+            const userId = el.getAttribute('data-userid');
+            const xsecToken = el.getAttribute('data-xsec');
+            const nickname = el.getAttribute('data-nickname');
+            const avatar = el.getAttribute('data-avatar');
+
+            // Show inline num selector on the card
+            const existing = el.querySelector('.inline-num-selector');
+            if (existing) return; // Already showing
+
+            const selector = document.createElement('div');
+            selector.className = 'inline-num-selector';
+            selector.innerHTML = '<span>获取笔记数：</span>' +
+                '<select class="inline-num-select">' +
+                '<option value="5">5 条</option>' +
+                '<option value="10">10 条</option>' +
+                '<option value="20" selected>20 条</option>' +
+                '<option value="30">30 条</option>' +
+                '<option value="50">50 条</option>' +
+                '</select>' +
+                '<button class="inline-go-btn" type="button">查看</button>';
+            selector.onclick = function(e) { e.stopPropagation(); };
+            selector.querySelector('.inline-go-btn').onclick = function(e) {
+                e.stopPropagation();
+                const num = parseInt(selector.querySelector('.inline-num-select').value);
+                loadUserNotes(userId, xsecToken, nickname, avatar, num);
+            };
+            el.appendChild(selector);
+        }
+
+        function handleUserSearch() {
+            const keyword = document.getElementById('userKeywordInput').value.trim();
+            if (!keyword) {
+                document.getElementById('userFormHint').classList.add('visible');
+                return;
+            }
+            document.getElementById('userFormHint').classList.remove('visible');
+            doUserSearch(keyword, document.getElementById('userNumSelect').value);
+        }
+
+        document.getElementById('userSearchBtn').addEventListener('click', handleUserSearch);
+        document.getElementById('userKeywordInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleUserSearch(); });
+        document.getElementById('userKeywordInput').addEventListener('input', function() { document.getElementById('userFormHint').classList.remove('visible'); });
+
+        function cancelUserSearch() {
+            if (state.userAbortController) {
+                state.userAbortController.abort();
+                state.userAbortController = null;
+            }
+            if (state.userNotesAbortController) {
+                state.userNotesAbortController.abort();
+                state.userNotesAbortController = null;
+            }
+            setUserLoading(false);
+            document.getElementById('userList').innerHTML = '';
+        }
+
+        // =============================================
+        // CSV EXPORT (client-side, no backend call)
+        // =============================================
+
+        function exportNoteCSV() {
+            if (!state.results || !state.results.notes || state.results.notes.length === 0) return;
+            const keyword = state.results.keyword || 'search';
+            exportZip(state.results.notes, 'xhs_search_' + keyword);
+        }
+
+        function exportUserCSV() {
+            if (!state.currentUserNotes || !state.currentUserNotes.notes || state.currentUserNotes.notes.length === 0) return;
+            const userId = state.currentUserId || 'user';
+            exportZip(state.currentUserNotes.notes, 'xhs_user_' + userId);
+        }
+
+        async function exportZip(notes, name) {
+            // Get the button
+            const btn = event.target;
+            const originalText = btn.textContent;
+            const originalOnclick = btn.onclick;
+            btn.style.minWidth = btn.offsetWidth + 'px';
+
+            // Create abort controller for cancel
+            state.exportAbortController = new AbortController();
+            let cancelled = false;
+
+            // Estimated progress
+            const estimatedMs = Math.max(notes.length * 500, 3000);
+            let elapsed = 0;
+
+            const progressTimer = setInterval(function() {
+                elapsed += 200;
+                const pct = Math.min(90, Math.round((elapsed / estimatedMs) * 90));
+                btn.textContent = '⏳ ' + pct + '% 点击取消';
+            }, 200);
+
+            // Button becomes cancel button (NOT disabled)
+            btn.textContent = '⏳ 0% 点击取消';
+            btn.onclick = function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                cancelled = true;
+                if (state.exportAbortController) state.exportAbortController.abort();
+                clearInterval(progressTimer);
+                btn.textContent = originalText;
+                btn.style.minWidth = '';
+                btn.onclick = originalOnclick;
+            };
+
+            try {
+                const response = await fetch('/api/xhs/export/zip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: notes, name: name }),
+                    signal: state.exportAbortController.signal
+                });
+
+                clearInterval(progressTimer);
+                if (cancelled) return;
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    showError(err.message || '导出失败');
+                    btn.textContent = originalText;
+                    btn.style.minWidth = '';
+                    btn.onclick = originalOnclick;
+                    return;
+                }
+
+                btn.textContent = '✅ 下载中...';
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = response.headers.get('Content-Disposition') || '';
+                let filename = name + '.zip';
+                const match = disposition.match(/filename\*=UTF-8''(.+)/);
+                if (match) filename = decodeURIComponent(match[1]);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                btn.textContent = '✅ 完成';
+                setTimeout(function() {
+                    btn.textContent = originalText;
+                    btn.style.minWidth = '';
+                    btn.onclick = originalOnclick;
+                }, 2000);
+            } catch (err) {
+                clearInterval(progressTimer);
+                if (err.name === 'AbortError') {
+                    // User cancelled - already handled above
+                    return;
+                }
+                showError('导出失败，请稍后重试');
+                btn.textContent = originalText;
+                btn.style.minWidth = '';
+                btn.onclick = originalOnclick;
+            }
+        }
+
+        // =============================================
+        // SHARED UTILITIES
+        // =============================================
+
+        function renderAISummaryTyping(md, contentId, toggleBtnId) {
+            const contentEl = document.getElementById(contentId);
+            const toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
+
+            contentEl.classList.remove('collapsed');
+            if (toggleBtn) {
+                toggleBtn.style.display = 'none';
+                toggleBtn.textContent = '展开全文';
+            }
+
+            if (!md || md.trim() === '' || md.indexOf('暂不可用') !== -1) {
+                contentEl.innerHTML = '<p class="summary-fallback">AI 分析暂不可用，请查看下方笔记列表获取详细内容</p>';
+                return;
+            }
+
+            // Dock AI panel to left side
+            var panel = contentEl.closest('.ai-summary-panel');
+            if (panel && window.innerWidth > 767) {
+                panel.classList.add('docked-left');
+                document.getElementById('appContainer').classList.add('ai-docked');
+            }
+
+            let charIndex = 0;
+            let currentText = '';
+            contentEl.innerHTML = '<span class="typing-cursor"></span>';
+
+            const timer = setInterval(function() {
+                currentText += md[charIndex];
+                charIndex++;
+                if (charIndex % 5 === 0 || charIndex >= md.length) {
+                    contentEl.innerHTML = marked.parse(currentText) + (charIndex < md.length ? '<span class="typing-cursor"></span>' : '');
+                }
+                if (charIndex >= md.length) {
+                    clearInterval(timer);
+                    contentEl.innerHTML = marked.parse(currentText);
+                }
+            }, 20);
+
+            // Toggle handler (no longer collapse, panel is scrollable)
+            if (toggleBtn) {
+                toggleBtn.style.display = 'none';
+            }
+        }
+
+        function renderNoteCards(notes, listId) {
+            const noteList = document.getElementById(listId);
+            noteList.classList.add('visible');
+
+            if (!notes || notes.length === 0) {
+                noteList.innerHTML = '<div class="empty-state">未找到相关笔记</div>';
+                return;
+            }
+
+            noteList.innerHTML = '';
+            notes.forEach(function(note, index) {
+                setTimeout(function() {
+                    noteList.insertAdjacentHTML('beforeend', buildNoteCardHtml(note, listId + '_' + index, listId));
+                }, index * 100);
+            });
+        }
+
+        function buildNoteCardHtml(note, id, listId) {
+            const fullContent = note.content || '';
+            const needsTruncation = fullContent.length > 300;
+            const displayContent = needsTruncation ? fullContent.substring(0, 300) + '...' : fullContent;
+
+            let html = '<div class="note-card clickable" data-note-id="' + id + '" data-list-id="' + (listId || '') + '" onclick="openXhsNoteSidebar(\'' + id + '\', \'' + (listId || '') + '\')">';
+            html += '<div class="note-title">' + escapeHtml(note.title || '无标题') + '</div>';
+            html += '<div class="note-content" id="nc_' + id + '">' + escapeHtml(displayContent) + '</div>';
+            html += '<div class="note-meta">';
+            html += '<span class="note-author">👤 ' + escapeHtml(note.author || '') + '</span>';
+            html += '<div class="note-stats">';
+            html += '<span>❤️ ' + formatNumber(note.likes || 0) + '</span>';
+            html += '<span>⭐ ' + formatNumber(note.collected || 0) + '</span>';
+            html += '<span>💬 ' + formatNumber(note.comments || 0) + '</span>';
+            html += '</div></div>';
+            html += '</div>';
+            return html;
+        }
+
+        function formatNumber(n) {
+            if (n === undefined || n === null) return '0';
+            if (n < 10000) return n.toString();
+            return (Math.floor(n / 1000) / 10) + '万';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        // === Error Handling ===
+        let errorTimerId = null;
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorToast').classList.remove('fade-out');
+            document.getElementById('errorToast').classList.add('visible');
+            if (errorTimerId) clearTimeout(errorTimerId);
+            errorTimerId = setTimeout(hideError, 10000);
+        }
+
+        function hideError() {
+            document.getElementById('errorToast').classList.add('fade-out');
+            setTimeout(function() {
+                document.getElementById('errorToast').classList.remove('visible', 'fade-out');
+            }, 300);
+        }
+
+        document.getElementById('errorClose').addEventListener('click', function() {
+            if (errorTimerId) { clearTimeout(errorTimerId); errorTimerId = null; }
+            hideError();
+        });
+
+        // =============================================
+        // WECHAT OFFICIAL ACCOUNT SEARCH
+        // =============================================
+
+        const wechatState = {
+            accounts: [],
+            currentFakeid: '',
+            currentNickname: '',
+            articles: [],
+            articleBegin: 0,
+            articleKeyword: '',
+            articleSize: 20
+        };
+
+        async function doWechatSearch() {
+            const keyword = document.getElementById('wechatKeywordInput').value.trim();
+            if (!keyword) {
+                document.getElementById('wechatFormHint').classList.add('visible');
+                return;
+            }
+            document.getElementById('wechatFormHint').classList.remove('visible');
+            enterSearchedState();
+
+            document.getElementById('wechatAccountList').classList.add('visible');
+            document.getElementById('wechatAccountList').innerHTML = '<div class="skeleton-cards visible"><div class="skeleton-card"><div class="skeleton-line title"></div><div class="skeleton-line content"></div></div></div>';
+            document.getElementById('wechatArticleView').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/wechat/search/accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword })
+                });
+                const data = await response.json();
+                if (data.code === 200) {
+                    renderWechatAccounts(data.data.accounts);
+                } else {
+                    showError(data.message || '搜索失败');
+                    document.getElementById('wechatAccountList').innerHTML = '';
+                }
+            } catch (err) {
+                showError('网络异常');
+                document.getElementById('wechatAccountList').innerHTML = '';
+            }
+        }
+
+        function renderWechatAccounts(accounts) {
+            const list = document.getElementById('wechatAccountList');
+            list.classList.add('visible');
+            wechatState.accounts = accounts;
+
+            if (!accounts || accounts.length === 0) {
+                list.innerHTML = '<div class="empty-state">未找到匹配的公众号</div>';
+                return;
+            }
+
+            let html = '';
+            accounts.forEach(function(acc, idx) {
+                html += '<div class="user-card" style="animation-delay:' + (idx * 0.1) + 's" data-fakeid="' + escapeHtml(acc.fakeid) + '" data-nickname="' + escapeHtml(acc.nickname) + '" onclick="selectWechatAccount(this)">';
+                html += '<img class="user-avatar" src="' + escapeHtml(acc.round_head_img || '') + '" alt="" onerror="this.style.display=\'none\'">';
+                html += '<div class="user-info">';
+                html += '<div class="user-nickname">' + escapeHtml(acc.nickname) + '</div>';
+                html += '<div class="user-meta">';
+                if (acc.alias) html += '<span>微信号: ' + escapeHtml(acc.alias) + '</span>';
+                html += '</div>';
+                html += '<div class="user-desc">' + escapeHtml(acc.signature || '暂无简介') + '</div>';
+                html += '</div>';
+                html += '<span class="user-arrow">›</span>';
+                html += '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function selectWechatAccount(el) {
+            const fakeid = el.getAttribute('data-fakeid');
+            const nickname = el.getAttribute('data-nickname');
+
+            // Show inline num selector on the card (like XHS user cards)
+            const existing = el.querySelector('.inline-num-selector');
+            if (existing) return;
+
+            const selector = document.createElement('div');
+            selector.className = 'inline-num-selector';
+            selector.innerHTML = '<span>获取文章数：</span>' +
+                '<select class="inline-num-select">' +
+                '<option value="10">10 篇</option>' +
+                '<option value="20" selected>20 篇</option>' +
+                '<option value="40">40 篇</option>' +
+                '<option value="60">60 篇</option>' +
+                '<option value="100">100 篇</option>' +
+                '<option value="0">全部</option>' +
+                '</select>' +
+                '<button class="inline-go-btn" type="button">查看</button>';
+            selector.onclick = function(e) { e.stopPropagation(); };
+            selector.querySelector('.inline-go-btn').onclick = function(e) {
+                e.stopPropagation();
+                var num = parseInt(selector.querySelector('.inline-num-select').value);
+                startLoadWechatAccount(fakeid, nickname, num);
+            };
+            el.appendChild(selector);
+        }
+
+        function startLoadWechatAccount(fakeid, nickname, num) {
+            wechatState.currentFakeid = fakeid;
+            wechatState.currentNickname = nickname;
+            wechatState.articleBegin = 0;
+            wechatState.articles = [];
+            wechatState.articleKeyword = '';
+            wechatState.articleSize = num || 20;
+
+            document.getElementById('wechatAccountList').classList.remove('visible');
+            document.getElementById('wechatArticleView').style.display = 'block';
+            document.getElementById('wechatAccountHeader').innerHTML =
+                '<div class="user-info"><div class="user-nickname">' + escapeHtml(nickname) + '</div><div class="user-meta">加载文章中...</div></div>';
+            document.getElementById('wechatArticleList').classList.remove('visible');
+            document.getElementById('wechatArticleList').innerHTML = '';
+            document.getElementById('wechatArticleKeyword').value = '';
+
+            loadWechatArticles();
+        }
+
+        async function loadWechatArticles() {
+            const list = document.getElementById('wechatArticleList');
+            const targetSize = wechatState.articleSize || 20;
+            const isFirstLoad = wechatState.articleBegin === 0;
+
+            // Show progress bar on first load
+            var progressEl = document.getElementById('wechatArticleProgress');
+            var progressFill = document.getElementById('wechatArticleProgressFill');
+            var progressText = document.getElementById('wechatArticleProgressText');
+
+            if (isFirstLoad) {
+                list.innerHTML = '';
+                list.classList.remove('visible');
+                document.getElementById('wechatAiPanel').style.display = 'block';
+                progressEl.classList.add('visible');
+                progressFill.style.width = '5%';
+                progressText.textContent = '正在加载文章列表...';
+            }
+
+            try {
+                // Auto-paginate to reach target size (0 = all)
+                var totalAvailable = 0;
+                while (targetSize === 0 || wechatState.articles.length < targetSize) {
+                    var fetchSize = 20;
+                    if (targetSize > 0) {
+                        fetchSize = Math.min(20, targetSize - wechatState.articles.length);
+                    }
+                    const response = await fetch('/api/wechat/articles', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fakeid: wechatState.currentFakeid,
+                            begin: wechatState.articleBegin,
+                            size: fetchSize,
+                            keyword: wechatState.articleKeyword
+                        })
+                    });
+                    const data = await response.json();
+
+                    if (data.code !== 200) {
+                        if (isFirstLoad) progressEl.classList.remove('visible');
+                        showError(data.message || '获取文章失败');
+                        return;
+                    }
+
+                    var articles = data.data.articles || [];
+                    totalAvailable = data.data.total || 0;
+                    // Truncate to not exceed target size (skip if loading all)
+                    if (targetSize > 0) {
+                        var remaining = targetSize - wechatState.articles.length;
+                        if (articles.length > remaining) {
+                            articles = articles.slice(0, remaining);
+                        }
+                    }
+                    wechatState.articles = wechatState.articles.concat(articles);
+                    wechatState.articleBegin += articles.length;
+
+                    // Update progress
+                    if (isFirstLoad) {
+                        var displayTotal = targetSize > 0 ? Math.min(targetSize, totalAvailable) : totalAvailable;
+                        var pct = displayTotal > 0 ? Math.min(80, 10 + (wechatState.articles.length / displayTotal) * 70) : 50;
+                        progressFill.style.width = pct + '%';
+                        progressText.textContent = '已加载 ' + wechatState.articles.length + '/' + displayTotal + ' 篇文章...';
+                    }
+
+                    // Stop if no more articles or reached total
+                    if (articles.length === 0 || wechatState.articles.length >= totalAvailable) break;
+                }
+
+                document.getElementById('wechatAccountHeader').querySelector('.user-meta').textContent =
+                    '共 ' + totalAvailable + ' 篇文章 · 已加载 ' + wechatState.articles.length + ' 篇';
+
+                if (isFirstLoad) {
+                    progressFill.style.width = '85%';
+                    progressText.textContent = 'AI 正在分析...';
+                }
+
+                renderWechatArticles();
+
+                // Trigger AI analysis on first load
+                if (isFirstLoad && wechatState.articles.length > 0) {
+                    analyzeWechatArticles();
+                }
+
+                // Hide progress
+                if (isFirstLoad) {
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '';
+                    setTimeout(function() { progressEl.classList.remove('visible'); }, 300);
+                }
+            } catch (err) {
+                if (isFirstLoad) progressEl.classList.remove('visible');
+                showError('网络异常');
+            }
+        }
+
+        function renderWechatArticles() {
+            const list = document.getElementById('wechatArticleList');
+            list.classList.add('visible');
+
+            if (wechatState.articles.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无文章</div>';
+                return;
+            }
+
+            let html = '';
+            wechatState.articles.forEach(function(art, idx) {
+                // Strip HTML tags from title (API returns <em class="highlight"> tags)
+                const title = (art.title || '无标题').replace(/<[^>]+>/g, '');
+                const digest = (art.digest || '').replace(/<[^>]+>/g, '');
+                const link = art.link || '';
+                const author = art.author_name || '';
+                const updateTime = art.update_time ? new Date(art.update_time * 1000).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}) : '';
+
+                html += '<div class="note-card clickable" style="animation-delay:0s" data-article-idx="' + idx + '" onclick="openArticleSidebar(' + idx + ')">';
+                html += '<div class="note-title">' + escapeHtml(title) + '</div>';
+                if (digest) html += '<div class="note-content">' + escapeHtml(digest) + '</div>';
+                html += '<div class="note-meta">';
+                if (author) html += '<span class="note-author">✍️ ' + escapeHtml(author) + '</span>';
+                if (updateTime) html += '<span>📅 ' + updateTime + '</span>';
+                html += '</div>';
+                html += '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function filterWechatArticles() {
+            wechatState.articleKeyword = document.getElementById('wechatArticleKeyword').value.trim();
+            wechatState.articleBegin = 0;
+            wechatState.articles = [];
+            loadWechatArticles();
+        }
+
+        function exportWechatCSV() {
+            if (!wechatState.articles || wechatState.articles.length === 0) {
+                showError('暂无文章可导出');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ 打包中...';
+
+            fetch('/api/wechat/export/zip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    articles: wechatState.articles,
+                    name: 'wechat_' + (wechatState.currentNickname || 'articles')
+                })
+            }).then(function(response) {
+                if (!response.ok) throw new Error('导出失败');
+                return response.blob();
+            }).then(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'wechat_' + (wechatState.currentNickname || 'articles') + '.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                btn.textContent = '✅ 完成';
+                setTimeout(function() { btn.textContent = originalText; }, 2000);
+            }).catch(function(err) {
+                showError(err.message || '导出失败');
+                btn.textContent = originalText;
+            });
+        }
+
+        function backToAccountList() {
+            // Close sidebar if open
+            if (document.getElementById('articleSidebar').classList.contains('open')) {
+                closeArticleSidebar();
+            }
+            document.getElementById('wechatArticleView').style.display = 'none';
+            document.getElementById('wechatAccountList').classList.add('visible');
+        }
+
+        async function analyzeWechatArticles() {
+            const panel = document.getElementById('wechatAiPanel');
+            const loading = document.getElementById('wechatAiLoading');
+            const content = document.getElementById('wechatSummaryContent');
+
+            panel.style.display = 'block';
+            loading.style.display = 'flex';
+            content.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/wechat/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        articles: wechatState.articles,
+                        account_name: wechatState.currentNickname
+                    })
+                });
+                const data = await response.json();
+                loading.style.display = 'none';
+                loading.style.visibility = 'hidden';
+
+                if (data.code === 200 && data.data.summary) {
+                    renderAISummaryTyping(data.data.summary, 'wechatSummaryContent', null);
+                } else {
+                    content.innerHTML = '<p class="summary-fallback">AI 分析暂不可用</p>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                loading.style.visibility = 'hidden';
+                content.innerHTML = '<p class="summary-fallback">AI 分析暂不可用</p>';
+            }
+        }
+
+        // =============================================
+        // CONTENT DETAIL SIDEBAR (shared by WeChat & XHS)
+        // =============================================
+
+        const sidebarState = {
+            source: null,       // 'wechat' or 'xhs'
+            currentArticle: null,
+            currentContent: null,
+            currentNote: null,
+            aiAnalyzed: false
+        };
+
+        function openXhsNoteSidebar(noteId, listId) {
+            // Extract index from noteId (format: "listId_index")
+            const parts = noteId.split('_');
+            const idx = parseInt(parts[parts.length - 1]);
+
+            // Get note data from memory
+            var note = null;
+            if (listId === 'noteList' && state.results && state.results.notes) {
+                note = state.results.notes[idx];
+            } else if (listId === 'userNoteList' && state.currentUserNotes && state.currentUserNotes.notes) {
+                note = state.currentUserNotes.notes[idx];
+            }
+            if (!note) return;
+
+            sidebarState.source = 'xhs';
+            sidebarState.currentNote = note;
+            sidebarState.currentArticle = null;
+            sidebarState.currentContent = note.content || '';
+            sidebarState.aiAnalyzed = false;
+
+            // Set sidebar header
+            document.getElementById('sidebarArticleTitle').textContent = note.title || '无标题';
+
+            // Set meta (XHS style: author + stats + tags)
+            var metaHtml = '';
+            if (note.author) metaHtml += '<span class="meta-author">👤 ' + escapeHtml(note.author) + '</span>';
+            metaHtml += '<span>❤️ ' + formatNumber(note.likes || 0) + '</span>';
+            metaHtml += '<span>⭐ ' + formatNumber(note.collected || 0) + '</span>';
+            metaHtml += '<span>💬 ' + formatNumber(note.comments || 0) + '</span>';
+            document.getElementById('sidebarArticleMeta').innerHTML = metaHtml;
+
+            // Set original link
+            var linkEl = document.getElementById('sidebarOriginalLink');
+            if (note.note_url) {
+                linkEl.href = note.note_url;
+                linkEl.style.display = 'inline-flex';
+            } else {
+                linkEl.style.display = 'none';
+            }
+
+            // Reset AI section
+            document.getElementById('sidebarAiSection').style.display = 'none';
+            document.getElementById('sidebarAiContent').innerHTML = '';
+            document.getElementById('sidebarAiContent').classList.remove('collapsed');
+            document.getElementById('sidebarAiLoading').style.display = 'none';
+            document.getElementById('sidebarAiToggleBtn').style.display = 'none';
+            document.getElementById('sidebarAiBtn').disabled = false;
+            document.getElementById('sidebarAiBtn').innerHTML = '<span>🧠</span> AI 舆情分析';
+
+            // Hide wechat-specific loading, show XHS content directly
+            document.getElementById('sidebarContentLoading').style.display = 'none';
+
+            // Build XHS content: media + text
+            var contentHtml = '';
+
+            // Media area (video cover or images)
+            var hasVideo = !!note.video_url;
+            var hasImages = note.image_list && note.image_list.length > 0;
+            var hasCover = !!note.cover_image;
+
+            if (hasVideo || hasImages || hasCover) {
+                contentHtml += '<div class="sidebar-media-area">';
+                if (hasVideo) {
+                    // Video notes: show cover image + play hint
+                    var coverSrc = note.cover_image || (hasImages ? note.image_list[0] : '');
+                    if (coverSrc) {
+                        contentHtml += '<div class="video-cover-wrapper">';
+                        contentHtml += '<img src="' + escapeHtml(coverSrc) + '" class="video-cover" onerror="xhsImageFallback(this)">';
+                        contentHtml += '<div class="video-play-overlay">▶ 视频笔记</div>';
+                        contentHtml += '</div>';
+                    }
+                    contentHtml += '<p class="video-hint">视频无法在此播放，请点击「查看原文」观看</p>';
+                } else if (hasImages) {
+                    contentHtml += '<div class="xhs-image-list">';
+                    note.image_list.forEach(function(imgUrl) {
+                        contentHtml += '<img src="' + escapeHtml(imgUrl) + '" loading="lazy" onerror="xhsImageFallback(this)">';
+                    });
+                    contentHtml += '</div>';
+                } else if (hasCover) {
+                    contentHtml += '<img src="' + escapeHtml(note.cover_image) + '" class="video-cover" style="width:100%;border-radius:12px;" onerror="xhsImageFallback(this)">';
+                }
+                contentHtml += '</div>';
+            }
+
+            // Tags
+            if (note.tags && note.tags.length > 0) {
+                contentHtml += '<div class="sidebar-tags">';
+                note.tags.forEach(function(tag) {
+                    contentHtml += '<span class="tag">#' + escapeHtml(tag) + '</span>';
+                });
+                contentHtml += '</div>';
+            }
+
+            // Text content
+            if (note.content) {
+                contentHtml += '<div class="sidebar-text-content">' + escapeHtml(note.content) + '</div>';
+            }
+
+            // If nothing to show at all, display a hint
+            if (!contentHtml) {
+                contentHtml = '<div class="sidebar-text-content" style="color:#64748b;font-style:italic;">该笔记为视频/图片笔记，暂无文字内容。请点击「查看原文」查看完整内容。</div>';
+            }
+
+            document.getElementById('sidebarMarkdownContent').innerHTML = contentHtml;
+
+            // Highlight active card
+            document.querySelectorAll('.note-card.clickable').forEach(function(card) {
+                card.classList.remove('active');
+            });
+            var activeCard = document.querySelector('.note-card[data-note-id="' + noteId + '"]');
+            if (activeCard) activeCard.classList.add('active');
+
+            // Open sidebar
+            document.getElementById('articleSidebarOverlay').classList.add('visible');
+            document.getElementById('articleSidebar').classList.add('open');
+            document.body.classList.add('sidebar-open');
+            document.getElementById('sidebarBody').scrollTop = 0;
+        }
+
+        function xhsImageFallback(img) {
+            var originalSrc = img.getAttribute('src');
+            if (originalSrc && originalSrc.indexOf('/api/xhs/image/proxy') === -1) {
+                // Try proxy as fallback
+                img.onerror = function() { this.style.display = 'none'; };
+                img.src = '/api/xhs/image/proxy?url=' + encodeURIComponent(originalSrc);
+            } else {
+                img.style.display = 'none';
+            }
+        }
+
+        function openArticleSidebar(idx) {
+            const art = wechatState.articles[idx];
+            if (!art) return;
+
+            sidebarState.source = 'wechat';
+            sidebarState.currentArticle = art;
+            sidebarState.currentNote = null;
+            sidebarState.currentContent = null;
+            sidebarState.aiAnalyzed = false;
+
+            const title = (art.title || '无标题').replace(/<[^>]+>/g, '');
+            const author = art.author_name || '';
+            const updateTime = art.update_time ? new Date(art.update_time * 1000).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}) : '';
+            const link = art.link || '';
+
+            // Set sidebar header
+            document.getElementById('sidebarArticleTitle').textContent = title;
+
+            // Set meta
+            let metaHtml = '';
+            if (author) metaHtml += '<span class="meta-author">✍️ ' + escapeHtml(author) + '</span>';
+            if (updateTime) metaHtml += '<span>📅 ' + updateTime + '</span>';
+            if (wechatState.currentNickname) metaHtml += '<span>📢 ' + escapeHtml(wechatState.currentNickname) + '</span>';
+            document.getElementById('sidebarArticleMeta').innerHTML = metaHtml;
+
+            // Set original link
+            const linkEl = document.getElementById('sidebarOriginalLink');
+            if (link) {
+                linkEl.href = link;
+                linkEl.style.display = 'inline-flex';
+            } else {
+                linkEl.style.display = 'none';
+            }
+
+            // Reset AI section
+            document.getElementById('sidebarAiSection').style.display = 'none';
+            document.getElementById('sidebarAiContent').innerHTML = '';
+            document.getElementById('sidebarAiContent').classList.remove('collapsed');
+            document.getElementById('sidebarAiLoading').style.display = 'none';
+            document.getElementById('sidebarAiToggleBtn').style.display = 'none';
+            document.getElementById('sidebarAiBtn').disabled = false;
+            document.getElementById('sidebarAiBtn').innerHTML = '<span>🧠</span> AI 深度分析';
+
+            // Reset content area
+            document.getElementById('sidebarContentLoading').style.display = 'flex';
+            document.getElementById('sidebarMarkdownContent').innerHTML = '';
+
+            // Highlight active card
+            document.querySelectorAll('#wechatArticleList .note-card').forEach(function(card) {
+                card.classList.remove('active');
+            });
+            const activeCard = document.querySelector('#wechatArticleList .note-card[data-article-idx="' + idx + '"]');
+            if (activeCard) activeCard.classList.add('active');
+
+            // Open sidebar with animation
+            document.getElementById('articleSidebarOverlay').classList.add('visible');
+            document.getElementById('articleSidebar').classList.add('open');
+            document.body.classList.add('sidebar-open');
+
+            // Scroll sidebar to top
+            document.getElementById('sidebarBody').scrollTop = 0;
+
+            // Load article content
+            loadArticleContent(link);
+        }
+
+        function closeArticleSidebar() {
+            document.getElementById('articleSidebarOverlay').classList.remove('visible');
+            document.getElementById('articleSidebar').classList.remove('open');
+            document.body.classList.remove('sidebar-open');
+
+            // Remove active highlight from all clickable cards
+            document.querySelectorAll('.note-card.clickable').forEach(function(card) {
+                card.classList.remove('active');
+            });
+            document.querySelectorAll('#wechatArticleList .note-card').forEach(function(card) {
+                card.classList.remove('active');
+            });
+
+            sidebarState.source = null;
+            sidebarState.currentArticle = null;
+            sidebarState.currentNote = null;
+            sidebarState.currentContent = null;
+        }
+
+        async function loadArticleContent(url) {
+            if (!url) {
+                document.getElementById('sidebarContentLoading').style.display = 'none';
+                document.getElementById('sidebarMarkdownContent').innerHTML = '<div class="content-error">文章链接不可用</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/wechat/article/content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, format: 'markdown' })
+                });
+                const data = await response.json();
+
+                document.getElementById('sidebarContentLoading').style.display = 'none';
+
+                if (data.code === 200 && data.data.content) {
+                    const cleanedContent = cleanArticleMarkdown(data.data.content);
+                    sidebarState.currentContent = cleanedContent;
+                    document.getElementById('sidebarMarkdownContent').innerHTML = marked.parse(cleanedContent);
+                    // Handle broken images - hide them on error
+                    document.querySelectorAll('#sidebarMarkdownContent img').forEach(function(img) {
+                        img.onerror = function() { this.style.display = 'none'; };
+                    });
+                } else {
+                    document.getElementById('sidebarMarkdownContent').innerHTML = '<div class="content-error">获取文章内容失败，请稍后重试</div>';
+                }
+            } catch (err) {
+                document.getElementById('sidebarContentLoading').style.display = 'none';
+                document.getElementById('sidebarMarkdownContent').innerHTML = '<div class="content-error">网络异常，无法加载文章内容</div>';
+            }
+        }
+
+        /**
+         * Clean article markdown content:
+         * - Remove embedded CSS/style blocks
+         * - Remove broken image references (WeChat CDN images with anti-hotlink)
+         * - Remove HTML comments
+         * - Remove script tags
+         */
+        function cleanArticleMarkdown(md) {
+            if (!md) return '';
+            let cleaned = md;
+            // Remove style blocks (including multiline)
+            cleaned = cleaned.replace(new RegExp('<style[^>]*>[\\s\\S]*?<\\/sty' + 'le>', 'gi'), '');
+            // Remove script blocks
+            cleaned = cleaned.replace(new RegExp('<script[^>]*>[\\s\\S]*?<\\/scr' + 'ipt>', 'gi'), '');
+            // Remove HTML comments
+            cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+            // Remove inline style attributes (they often set white backgrounds)
+            cleaned = cleaned.replace(/\s*style\s*=\s*["'][^"']*["']/gi, '');
+            // Remove any line containing CSS braces { } (covers escaped and unescaped selectors)
+            cleaned = cleaned.replace(/^.*\{[^}]*\}.*$/gm, '');
+            // Remove lines containing typical WeChat page CSS patterns (with or without backslash escapes)
+            cleaned = cleaned.replace(/^.*(?:max-width|margin:\s*0\s*auto|sns_opr_btn|js_row_immersive|page-content|js_article_bottom_bar|page_content__).*$/gm, '');
+            // Remove WeChat boilerplate text
+            cleaned = cleaned.replace(/^(?:在小说阅读器读本章|去阅读|在小说阅读器中沉浸阅读)\s*$/gm, '');
+            // Remove lines that are just "·" or other single-char separators
+            cleaned = cleaned.replace(/^\s*[·•]\s*$/gm, '');
+            // Trim WeChat article footer: find earliest footer line in last 15 lines and cut
+            var lines = cleaned.split('\n');
+            var cutIdx = -1;
+            var searchStart = Math.max(0, lines.length - 15);
+            for (var li = searchStart; li < lines.length; li++) {
+                var line = lines[li].trim();
+                if (/\u70B9\u51FB.*\u9605\u8BFB\u539F\u6587/.test(line) || line === '\u9605\u8BFB\u539F\u6587') {
+                    cutIdx = li;
+                    break;
+                }
+            }
+            if (cutIdx > 0) {
+                // Also remove empty lines and image lines right before it (the arrow icon)
+                while (cutIdx > 0 && (lines[cutIdx - 1].trim() === '' || /^!\[/.test(lines[cutIdx - 1].trim()))) {
+                    cutIdx--;
+                }
+                cleaned = lines.slice(0, cutIdx).join('\n').trim();
+            }
+            // Fix malformed bold markers: ****text**** -> **text**
+            cleaned = cleaned.replace(/\*{4,}([^*\n]+)\*{4,}/g, '**$1**');
+            // Fix split bold markers: ****text\n**** -> **text** (trim trailing whitespace)
+            cleaned = cleaned.replace(/\*{4,}([^*\n]+?)\s*\n\*{4,}/g, '**$1**');
+            // Remove orphan **** on their own line
+            cleaned = cleaned.replace(/^\*{4,}\s*$/gm, '');
+            // Proxy ALL WeChat image CDN domains (mmbiz.qpic.cn, mmecoa.qpic.cn, etc.)
+            cleaned = cleaned.replace(/!\[([^\]]*)\]\((https?:\/\/[a-z_]*\.?qpic\.cn[^)]*)\)/g, function(match, alt, url) {
+                var proxyUrl = '/api/wechat/image/proxy?url=' + encodeURIComponent(url);
+                return '![' + (alt || '') + '](' + proxyUrl + ')';
+            });
+            // Handle img tags pointing to any qpic.cn domain - convert to proxy
+            cleaned = cleaned.replace(/<img([^>]*)src=["'](https?:\/\/[a-z_]*\.?qpic\.cn[^"']*)["']([^>]*)>/gi, function(match, before, url, after) {
+                var proxyUrl = '/api/wechat/image/proxy?url=' + encodeURIComponent(url);
+                return '<img' + before + 'src="' + proxyUrl + '"' + after + '>';
+            });
+            // Remove javascript:void links but keep the text (handle escaped parens)
+            cleaned = cleaned.replace(/\[([^\]]*)\]\(javascript:[^)]*(?:\\.[^)]*)*\)[;).]*/g, '**$1**');
+            // Remove empty lines clusters (more than 3 consecutive empty lines -> 2)
+            cleaned = cleaned.replace(/\n{4,}/g, '\n\n\n');
+            return cleaned.trim();
+        }
+
+        async function deepAnalyzeArticle() {
+            if (sidebarState.aiAnalyzed) return;
+
+            const btn = document.getElementById('sidebarAiBtn');
+            const section = document.getElementById('sidebarAiSection');
+            const loading = document.getElementById('sidebarAiLoading');
+            const content = document.getElementById('sidebarAiContent');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 分析中...';
+            section.style.display = 'block';
+            loading.style.display = 'flex';
+            content.innerHTML = '';
+
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            try {
+                var response;
+                if (sidebarState.source === 'xhs') {
+                    var note = sidebarState.currentNote;
+                    if (!note) return;
+                    response = await fetch('/api/xhs/note/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: note.title || '',
+                            content: note.content || '',
+                            author: note.author || '',
+                            likes: note.likes || 0,
+                            collected: note.collected || 0,
+                            comments: note.comments || 0,
+                            tags: note.tags || []
+                        })
+                    });
+                } else {
+                    var art = sidebarState.currentArticle;
+                    if (!art) return;
+                    response = await fetch('/api/wechat/article/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            url: art.link || '',
+                            title: (art.title || '').replace(/<[^>]+>/g, ''),
+                            content: sidebarState.currentContent || '',
+                            account_name: wechatState.currentNickname || ''
+                        })
+                    });
+                }
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (data.code === 200 && data.data.analysis) {
+                    sidebarState.aiAnalyzed = true;
+                    btn.innerHTML = '<span>✅</span> 分析完成';
+                    renderSidebarAITyping(data.data.analysis);
+                } else {
+                    content.innerHTML = '<p class="summary-fallback">AI 分析暂不可用，请稍后重试</p>';
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🧠</span> ' + (sidebarState.source === 'xhs' ? 'AI 舆情分析' : 'AI 深度分析');
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                content.innerHTML = '<p class="summary-fallback">网络异常，AI 分析失败</p>';
+                btn.disabled = false;
+                btn.innerHTML = '<span>🧠</span> ' + (sidebarState.source === 'xhs' ? 'AI 舆情分析' : 'AI 深度分析');
+            }
+        }
+
+        function renderSidebarAITyping(md) {
+            const contentEl = document.getElementById('sidebarAiContent');
+            const toggleBtn = document.getElementById('sidebarAiToggleBtn');
+
+            if (!md || md.trim() === '') {
+                contentEl.innerHTML = '<p class="summary-fallback">AI 分析暂不可用</p>';
+                toggleBtn.style.display = 'none';
+                return;
+            }
+
+            // Start in collapsed state immediately
+            contentEl.classList.add('collapsed');
+            toggleBtn.style.display = 'inline-block';
+            toggleBtn.textContent = '展开全部分析 ↓';
+
+            let charIndex = 0;
+            let currentText = '';
+            contentEl.innerHTML = '<span class="typing-cursor"></span>';
+
+            const timer = setInterval(function() {
+                currentText += md[charIndex];
+                charIndex++;
+                if (charIndex % 5 === 0 || charIndex >= md.length) {
+                    contentEl.innerHTML = marked.parse(currentText) + (charIndex < md.length ? '<span class="typing-cursor"></span>' : '');
+                }
+                if (charIndex >= md.length) {
+                    clearInterval(timer);
+                    contentEl.innerHTML = marked.parse(currentText);
+                }
+            }, 15);
+        }
+
+        function toggleSidebarAi() {
+            const contentEl = document.getElementById('sidebarAiContent');
+            const toggleBtn = document.getElementById('sidebarAiToggleBtn');
+            if (contentEl.classList.contains('collapsed')) {
+                contentEl.classList.remove('collapsed');
+                toggleBtn.textContent = '收起分析 ↑';
+            } else {
+                contentEl.classList.add('collapsed');
+                toggleBtn.textContent = '展开全部分析 ↓';
+                // Scroll AI section into view
+                document.getElementById('sidebarAiSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Close sidebar with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('articleSidebar').classList.contains('open')) {
+                closeArticleSidebar();
+            }
+        });
+
+        document.getElementById('wechatSearchBtn').addEventListener('click', doWechatSearch);
+        document.getElementById('wechatKeywordInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') doWechatSearch(); });
+        document.getElementById('wechatKeywordInput').addEventListener('input', function() { document.getElementById('wechatFormHint').classList.remove('visible'); });
+    </script>
+
+<!-- Fullscreen Image Viewer -->
+<div class="img-viewer-overlay" id="imgViewerOverlay" onclick="closeImageViewer()">
+    <img id="imgViewerImg" src="" alt="放大查看" />
+</div>
+
+<!-- Settings Modal -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsModal()"></div>
+<div class="settings-modal" id="settingsModal">
+    <div class="settings-header">
+        <h2>⚙️ 服务配置</h2>
+        <button class="settings-close-btn" onclick="closeSettingsModal()">&times;</button>
+    </div>
+    <div class="settings-body">
+        <div class="settings-section">
+            <h3>🔴 小红书 Cookie 配置</h3>
+            <div class="settings-tutorial">
+                <p><strong>获取步骤：</strong></p>
+                <ol>
+                    <li>在电脑浏览器打开 <a href="https://www.xiaohongshu.com" target="_blank">www.xiaohongshu.com</a> 并登录你的账号</li>
+                    <li>按 <code>F12</code> 打开开发者工具</li>
+                    <li>切换到 <code>网络 (Network)</code> 标签页</li>
+                    <li>点击 <code>Fetch/XHR</code> 过滤器</li>
+                    <li>在页面上随便操作一下（比如搜索），让网络面板出现请求</li>
+                    <li>点击任意一个请求，在右侧 <code>请求标头 (Request Headers)</code> 中找到 <code>cookie</code> 字段</li>
+                    <li>复制整个 cookie 值粘贴到下方输入框</li>
+                </ol>
+                <p class="settings-note">⚠️ Cookie 有效期约 7-30 天，过期后需重新获取。如果某个请求没有 cookie 字段，换一个请求看。</p>
+                <div class="settings-img-wrapper">
+                    <img src="/static/get_xhs_cookie.png" alt="获取小红书Cookie教程" class="settings-tutorial-img" onclick="openImageViewer(this.src)" />
+                    <p class="img-hint">👆 点击图片放大查看</p>
+                </div>
+            </div>
+            <textarea class="settings-input" id="settingsXhsCookies" rows="4" placeholder="粘贴小红书 Cookie..."></textarea>
+            <div class="settings-status" id="xhsStatus"></div>
+        </div>
+
+        <div class="settings-section">
+            <h3>💬 微信公众号 API Key 配置</h3>
+            <div class="settings-tutorial">
+                <p><strong>前置条件：</strong>你需要有一个微信公众号。如果还没有，请先创建：</p>
+                <ol>
+                    <li>访问 <a href="https://mp.weixin.qq.com" target="_blank">微信公众平台</a>，点击"立即注册"</li>
+                    <li>选择"订阅号"类型（个人即可注册）</li>
+                    <li>按提示填写邮箱、密码、个人信息完成注册</li>
+                </ol>
+                <p><strong>获取 API Key 步骤：</strong></p>
+                <ol>
+                    <li>访问 <a href="https://down.mptext.top" target="_blank">down.mptext.top</a></li>
+                    <li>使用你的公众号扫码登录</li>
+                    <li>登录后在页面上找到并复制你的 API Key</li>
+                </ol>
+                <p class="settings-note">⚠️ API Key 长期有效，一般不需要频繁更换</p>
+                <div class="settings-img-wrapper">
+                    <img src="/static/get_wechat_api_key.png" alt="获取微信API Key教程" class="settings-tutorial-img" onclick="openImageViewer(this.src)" />
+                    <p class="img-hint">👆 点击图片放大查看</p>
+                </div>
+            </div>
+            <input class="settings-input" id="settingsWechatKey" type="text" placeholder="粘贴 API Key..." />
+            <div class="settings-status" id="wechatStatus"></div>
+        </div>
+    </div>
+    <div class="settings-footer">
+        <button class="settings-save-btn" onclick="saveSettings()">💾 保存设置</button>
+    </div>
+</div>
+
+<!-- First-time Setup Prompt -->
+<div class="setup-prompt-overlay" id="setupPromptOverlay"></div>
+<div class="setup-prompt" id="setupPrompt">
+    <div class="setup-prompt-icon">🔧</div>
+    <h3>首次使用，请先配置</h3>
+    <p>检测到小红书 Cookie 或微信 API Key 尚未配置，需要配置后才能正常使用搜索功能。</p>
+    <div class="setup-prompt-actions">
+        <button class="setup-btn-primary" onclick="closeSetupPrompt(); openSettingsModal();">立即配置</button>
+        <button class="setup-btn-secondary" onclick="closeSetupPrompt()">稍后再说</button>
+    </div>
+    <label class="setup-no-remind">
+        <input type="checkbox" id="setupNoRemind" /> 不再提醒
+    </label>
+</div>
+
+<style>
+    /* Settings button - fixed top right */
+    .settings-btn-fixed {
+        position: fixed; top: 16px; right: 20px; z-index: 100;
+        background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white;
+        border: none; padding: 8px 16px; border-radius: 20px;
+        font-size: 14px; font-weight: 500; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(124,58,237,0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .settings-btn-fixed:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124,58,237,0.4); }
+
+    /* Settings modal */
+    .settings-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9998; }
+    .settings-overlay.open { display: block; }
+    .settings-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e1e3a; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 90%; max-width: 640px; max-height: 85vh; overflow-y: auto; z-index: 9999; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .settings-modal.open { display: block; }
+    .settings-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .settings-header h2 { margin: 0; font-size: 18px; color: #e2e8f0; }
+    .settings-close-btn { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+    .settings-close-btn:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+    .settings-body { padding: 24px; }
+    .settings-section { margin-bottom: 28px; }
+    .settings-section h3 { font-size: 15px; color: #e2e8f0; margin: 0 0 12px 0; }
+    .settings-tutorial { background: rgba(124,58,237,0.05); border: 1px solid rgba(124,58,237,0.15); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; font-size: 13px; color: #cbd5e1; line-height: 1.9; }
+    .settings-tutorial ol { padding-left: 20px; margin: 8px 0; }
+    .settings-tutorial li { margin-bottom: 6px; }
+    .settings-tutorial code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #a78bfa; }
+    .settings-tutorial a { color: #a78bfa; text-decoration: none; }
+    .settings-tutorial a:hover { text-decoration: underline; }
+    .settings-note { color: #f59e0b; font-size: 12px; margin-top: 8px; margin-bottom: 12px; }
+    .settings-img-wrapper { text-align: center; margin-top: 12px; }
+    .settings-tutorial-img { max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s; }
+    .settings-tutorial-img:hover { opacity: 0.9; }
+    .img-hint { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+    /* Fullscreen image viewer */
+    .img-viewer-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 99999; cursor: zoom-out; align-items: center; justify-content: center; }
+    .img-viewer-overlay.open { display: flex; }
+    .img-viewer-overlay img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .settings-input { width: 100%; background: #252540; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 13px; font-family: monospace; resize: vertical; box-sizing: border-box; }
+    .settings-input:focus { outline: none; border-color: rgba(124,58,237,0.5); }
+    .settings-status { font-size: 12px; margin-top: 6px; min-height: 18px; }
+    .settings-status.ok { color: #4ade80; }
+    .settings-status.empty { color: #94a3b8; }
+    .settings-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.05); text-align: right; }
+    .settings-save-btn { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .settings-save-btn:hover { opacity: 0.9; }
+
+    /* First-time setup prompt */
+    .setup-prompt-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9996; }
+    .setup-prompt-overlay.open { display: block; }
+    .setup-prompt { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e1e3a; border: 1px solid rgba(124,58,237,0.3); border-radius: 16px; padding: 32px; width: 90%; max-width: 420px; z-index: 9997; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .setup-prompt.open { display: block; }
+    .setup-prompt-icon { font-size: 48px; margin-bottom: 16px; }
+    .setup-prompt h3 { color: #e2e8f0; font-size: 18px; margin: 0 0 12px 0; }
+    .setup-prompt p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0; }
+    .setup-prompt-actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; }
+    .setup-btn-primary { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .setup-btn-primary:hover { opacity: 0.9; }
+    .setup-btn-secondary { background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    .setup-btn-secondary:hover { background: rgba(255,255,255,0.1); }
+    .setup-no-remind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; cursor: pointer; }
+    .setup-no-remind input { cursor: pointer; }
+</style>
+
+<script>
+    // === Image Viewer ===
+    function openImageViewer(src) {
+        document.getElementById('imgViewerImg').src = src;
+        document.getElementById('imgViewerOverlay').classList.add('open');
+    }
+    function closeImageViewer() {
+        document.getElementById('imgViewerOverlay').classList.remove('open');
+    }
+
+    // === Settings Modal ===
+    function openSettingsModal() {
+        document.getElementById('settingsOverlay').classList.add('open');
+        document.getElementById('settingsModal').classList.add('open');
+        loadSettings();
+    }
+
+    function closeSettingsModal() {
+        document.getElementById('settingsOverlay').classList.remove('open');
+        document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    async function loadSettings() {
+        try {
+            const resp = await fetch('/api/settings');
+            const data = await resp.json();
+            if (data.code === 200) {
+                var d = data.data;
+                document.getElementById('settingsXhsCookies').placeholder = d.xhs_cookies_configured ? '已配置: ' + d.xhs_cookies : '粘贴小红书 Cookie...';
+                document.getElementById('settingsWechatKey').placeholder = d.wechat_api_key_configured ? '已配置: ' + d.wechat_api_key : '粘贴 API Key...';
+                document.getElementById('xhsStatus').textContent = d.xhs_cookies_configured ? '✅ 已配置' : '⚠️ 未配置';
+                document.getElementById('xhsStatus').className = 'settings-status ' + (d.xhs_cookies_configured ? 'ok' : 'empty');
+                document.getElementById('wechatStatus').textContent = d.wechat_api_key_configured ? '✅ 已配置' : '⚠️ 未配置';
+                document.getElementById('wechatStatus').className = 'settings-status ' + (d.wechat_api_key_configured ? 'ok' : 'empty');
+            }
+        } catch (e) {
+            console.error('Load settings failed:', e);
+        }
+    }
+
+    async function saveSettings() {
+        var xhsCookies = document.getElementById('settingsXhsCookies').value.trim();
+        var wechatKey = document.getElementById('settingsWechatKey').value.trim();
+
+        if (!xhsCookies && !wechatKey) {
+            alert('请至少填写一项配置');
+            return;
+        }
+
+        var body = {};
+        if (xhsCookies) body.xhs_cookies = xhsCookies;
+        if (wechatKey) body.wechat_api_key = wechatKey;
+
+        try {
+            const resp = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await resp.json();
+            if (data.code === 200) {
+                alert('✅ 设置保存成功！');
+                document.getElementById('settingsXhsCookies').value = '';
+                document.getElementById('settingsWechatKey').value = '';
+                loadSettings();
+            } else {
+                alert('❌ 保存失败: ' + data.message);
+            }
+        } catch (e) {
+            alert('❌ 保存失败: ' + e.message);
+        }
+    }
+
+    // === First-time Setup Prompt ===
+    function closeSetupPrompt() {
+        document.getElementById('setupPromptOverlay').classList.remove('open');
+        document.getElementById('setupPrompt').classList.remove('open');
+        if (document.getElementById('setupNoRemind').checked) {
+            localStorage.setItem('setup_no_remind', 'true');
+        }
+    }
+
+    // Check on page load if we need to show setup prompt
+    (async function checkFirstTimeSetup() {
+        // Skip if user chose "don't remind"
+        if (localStorage.getItem('setup_no_remind') === 'true') return;
+
+        try {
+            const resp = await fetch('/api/settings');
+            const data = await resp.json();
+            if (data.code === 200) {
+                var d = data.data;
+                // Show prompt if any is not configured
+                if (!d.xhs_cookies_configured || !d.wechat_api_key_configured) {
+                    document.getElementById('setupPromptOverlay').classList.add('open');
+                    document.getElementById('setupPrompt').classList.add('open');
+                }
+            }
+        } catch (e) {
+            // Silently fail
+        }
+    })();
+</script>
+
+</body>
+</html>
