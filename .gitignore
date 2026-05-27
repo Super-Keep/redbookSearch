@@ -73,3 +73,6 @@ config/local_settings.json
 # Node modules
 node_modules/
 static/node_modules/
+
+# Word exports
+exports/

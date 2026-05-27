@@ -499,9 +499,9 @@
         .article-sidebar {
             position: fixed;
             top: 0; right: 0; bottom: 0;
-            width: 55%;
-            max-width: 720px;
-            min-width: 380px;
+            width: 85%;
+            max-width: 1200px;
+            min-width: 700px;
             background: #1e1e38;
             border-left: 1px solid rgba(255, 255, 255, 0.08);
             z-index: 950;
@@ -705,6 +705,146 @@
             padding: 12px 0;
         }
 
+        /* Split Layout for AI vs Original Content */
+        .sidebar-split-layout {
+            display: flex;
+            gap: 16px;
+            height: calc(100% - 100px);
+            min-height: 400px;
+        }
+        .sidebar-split-left {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+            padding-right: 8px;
+        }
+        .sidebar-split-left::-webkit-scrollbar { width: 6px; }
+        .sidebar-split-left::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.3); border-radius: 3px; }
+        .sidebar-split-right {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+            padding-left: 8px;
+            border-left: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .sidebar-split-right::-webkit-scrollbar { width: 6px; }
+        .sidebar-split-right::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.3); border-radius: 3px; }
+        .split-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .sidebar-ai-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            color: #64748b;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+        .sidebar-split-left .sidebar-ai-section {
+            margin-bottom: 0;
+        }
+
+        /* Generated Image Section */
+        .sidebar-gen-image {
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+        .sidebar-gen-image .gen-image-loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #94a3b8;
+            font-size: 14px;
+            padding: 20px 0;
+        }
+        .sidebar-gen-image .gen-image-loading .pulse-dot {
+            width: 8px; height: 8px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        .sidebar-gen-image .gen-image-result img {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        .sidebar-gen-image .gen-image-result .image-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .sidebar-gen-image .gen-image-result .image-actions button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .sidebar-gen-image .gen-image-result .image-actions button:hover {
+            background: rgba(245, 158, 11, 0.2);
+        }
+        .image-prompt-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .image-prompt-section .prompt-label {
+            display: block;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .image-prompt-section .prompt-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 1px solid #3d3d5c;
+            border-radius: 8px;
+            background: #2d2d4a;
+            color: #e2e8f0;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            font-family: inherit;
+        }
+        .image-prompt-section .prompt-textarea:focus {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+        }
+        .image-prompt-section .prompt-regen-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .image-prompt-section .prompt-regen-btn:hover {
+            box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+        }
+
         /* AI Deep Analysis Section in Sidebar */
         .sidebar-ai-section {
             background: #252540;
@@ -896,9 +1036,74 @@
             .ai-summary-panel.docked-left { position: static; width: 100%; max-width: 100%; height: auto; overflow-y: visible; }
             .container.searched.ai-docked { margin-left: auto; margin-right: auto; max-width: 100%; }
         }
+
+        /* Cookie Quick Bar */
+        .cookie-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #1a1a2e;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 8px 16px;
+        }
+        .cookie-bar-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .cookie-bar-label {
+            font-size: 13px;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+        .cookie-bar-input {
+            flex: 1;
+            height: 34px;
+            padding: 0 12px;
+            border: 1px solid #3d3d5c;
+            border-radius: 8px;
+            background: #2d2d4a;
+            color: #e2e8f0;
+            font-size: 13px;
+            outline: none;
+        }
+        .cookie-bar-input:focus {
+            border-color: #7c3aed;
+        }
+        .cookie-bar-input::placeholder { color: #64748b; font-size: 12px; }
+        .cookie-bar-btn {
+            height: 34px;
+            padding: 0 16px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .cookie-bar-btn:hover { box-shadow: 0 0 12px rgba(124, 58, 237, 0.4); }
+        .cookie-bar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .cookie-bar-status {
+            font-size: 12px;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
+    <!-- Cookie Quick Bar -->
+    <div class="cookie-bar" id="cookieBar">
+        <div class="cookie-bar-inner">
+            <span class="cookie-bar-label">🔑 Cookie:</span>
+            <input type="text" class="cookie-bar-input" id="cookieBarInput" placeholder="粘贴小红书 Cookie（从浏览器开发者工具复制）..." />
+            <button class="cookie-bar-btn" id="cookieBarSaveBtn" onclick="saveCookieFromBar()">保存</button>
+            <span class="cookie-bar-status" id="cookieBarStatus"></span>
+        </div>
+    </div>
+
     <div class="container" id="appContainer">
         <h1 class="page-title"><span class="title-accent">内容</span>情报搜索</h1>
         <button class="settings-btn-fixed" onclick="openSettingsModal()" title="设置">⚙️ 设置</button>
@@ -942,6 +1147,7 @@
                         <span id="metaDuration"></span>
                     </div>
                     <button class="export-btn" id="noteExportBtn" onclick="exportNoteCSV()">📦 导出 ZIP</button>
+                    <button class="export-btn" id="noteWordBtn" onclick="exportNoteWord()">📄 下载 Word</button>
                 </div>
 
                 <div class="ai-summary-panel" id="aiSummaryPanel">
@@ -994,6 +1200,7 @@
                     <div class="search-meta visible" id="userNotesMeta" style="display:none;">
                         <div class="meta-left"><span id="userNotesCount"></span></div>
                         <button class="export-btn" id="userExportBtn" onclick="exportUserCSV()">📦 导出 ZIP</button>
+                        <button class="export-btn" id="userWordBtn" onclick="exportUserWord()">📄 下载 Word</button>
                     </div>
                     <div class="ai-summary-panel" id="userAiPanel">
                         <div class="panel-title"><span class="ai-icon">✨</span> AI 智能总结</div>
@@ -1076,23 +1283,45 @@
                 <button class="sidebar-action-btn primary" id="sidebarAiBtn" onclick="deepAnalyzeArticle()">
                     <span>🧠</span> AI 深度分析
                 </button>
+                <button class="sidebar-action-btn primary" id="sidebarGenImageBtn" onclick="generateNoteImage()" style="background: linear-gradient(135deg, #f59e0b, #d97706);" disabled title="请先进行AI深度分析">
+                    <span>🎨</span> 生成配图
+                </button>
                 <a class="sidebar-action-btn secondary" id="sidebarOriginalLink" href="#" target="_blank" rel="noopener noreferrer">
                     <span>🔗</span> 查看原文
                 </a>
             </div>
-            <!-- AI Deep Analysis Section -->
-            <div class="sidebar-ai-section" id="sidebarAiSection" style="display:none;">
-                <div class="ai-section-title"><span class="ai-badge">✨</span> AI 深度分析</div>
-                <div class="ai-loading" id="sidebarAiLoading" style="display:none"><span class="pulse-dot"></span><span>AI 正在深度分析全文...</span></div>
-                <div class="ai-analysis-content" id="sidebarAiContent"></div>
-                <button type="button" class="sidebar-ai-toggle-btn" id="sidebarAiToggleBtn" style="display:none;" onclick="toggleSidebarAi()">收起分析 ↑</button>
-            </div>
-            <!-- Article Full Content -->
-            <div class="article-content-area" id="sidebarContentArea">
-                <div class="content-loading" id="sidebarContentLoading">
-                    <span class="pulse-dot"></span><span>正在加载文章全文...</span>
+            <!-- Split Layout: AI left, Content right -->
+            <div class="sidebar-split-layout" id="sidebarSplitLayout">
+                <!-- Left: AI Deep Analysis -->
+                <div class="sidebar-split-left" id="sidebarSplitLeft">
+                    <div class="sidebar-ai-section" id="sidebarAiSection" style="display:none;">
+                        <div class="ai-section-title"><span class="ai-badge">✨</span> AI 深度分析</div>
+                        <div class="ai-loading" id="sidebarAiLoading" style="display:none"><span class="pulse-dot"></span><span>AI 正在深度分析全文...</span></div>
+                        <div class="ai-analysis-content" id="sidebarAiContent"></div>
+                        <button type="button" class="sidebar-ai-toggle-btn" id="sidebarAiToggleBtn" style="display:none;" onclick="toggleSidebarAi()">收起分析 ↑</button>
+                    </div>
+                    <div class="sidebar-ai-placeholder" id="sidebarAiPlaceholder">
+                        <p>点击上方「🧠 AI 深度分析」按钮，分析结果将显示在这里</p>
+                    </div>
+                    <!-- Generated Image Section -->
+                    <div class="sidebar-gen-image" id="sidebarGenImage" style="display:none;">
+                        <div class="ai-section-title"><span class="ai-badge">🎨</span> AI 生成配图</div>
+                        <div class="gen-image-loading" id="genImageLoading" style="display:none;">
+                            <span class="pulse-dot"></span><span>正在生成配图（约30秒）...</span>
+                        </div>
+                        <div class="gen-image-result" id="genImageResult"></div>
+                    </div>
                 </div>
-                <div class="markdown-body" id="sidebarMarkdownContent"></div>
+                <!-- Right: Original Content -->
+                <div class="sidebar-split-right" id="sidebarSplitRight">
+                    <div class="split-section-title">📄 笔记原文</div>
+                    <div class="article-content-area" id="sidebarContentArea">
+                        <div class="content-loading" id="sidebarContentLoading">
+                            <span class="pulse-dot"></span><span>正在加载笔记内容...</span>
+                        </div>
+                        <div class="markdown-body" id="sidebarMarkdownContent"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1183,6 +1412,7 @@
                 document.getElementById('noteList').classList.remove('visible');
                 document.getElementById('noteList').innerHTML = '';
                 document.getElementById('noteExportBtn').classList.remove('visible');
+                document.getElementById('noteWordBtn').classList.remove('visible');
             } else {
                 document.getElementById('searchProgress').classList.remove('visible');
             }
@@ -1288,6 +1518,7 @@
                     document.getElementById('metaDuration').textContent = '耗时 ' + (duration / 1000).toFixed(2) + ' 秒';
                     if (finalData.notes && finalData.notes.length > 0) {
                         document.getElementById('noteExportBtn').classList.add('visible');
+                        document.getElementById('noteWordBtn').classList.add('visible');
                     }
                     // Step 3: Show notes after a short delay (let AI typing start first)
                     setTimeout(function() {
@@ -1321,6 +1552,7 @@
             // Show export button
             if (data.notes && data.notes.length > 0) {
                 document.getElementById('noteExportBtn').classList.add('visible');
+                document.getElementById('noteWordBtn').classList.add('visible');
             }
 
             renderAISummaryTyping(data.ai_summary, 'summaryContent', 'toggleSummaryBtn');
@@ -1569,6 +1801,7 @@
             document.getElementById('userNotesCount').textContent = '共 ' + data.note_count + ' 篇笔记';
             if (data.notes && data.notes.length > 0) {
                 document.getElementById('userExportBtn').classList.add('visible');
+                document.getElementById('userWordBtn').classList.add('visible');
             }
 
             // AI summary
@@ -1654,6 +1887,73 @@
             if (!state.currentUserNotes || !state.currentUserNotes.notes || state.currentUserNotes.notes.length === 0) return;
             const userId = state.currentUserId || 'user';
             exportZip(state.currentUserNotes.notes, 'xhs_user_' + userId);
+        }
+
+        // =============================================
+        // WORD EXPORT
+        // =============================================
+
+        async function exportNoteWord() {
+            if (!state.results || !state.results.ai_summary) {
+                showError('暂无AI分析内容可导出');
+                return;
+            }
+            const keyword = state.results.keyword || '搜索';
+            const title = '小红书分析｜' + keyword + '｜' + state.results.note_count + '篇';
+            await downloadWord(title, state.results.ai_summary, keyword, state.results.note_count);
+        }
+
+        async function exportUserWord() {
+            if (!state.currentUserNotes || !state.currentUserNotes.ai_summary) {
+                showError('暂无AI分析内容可导出');
+                return;
+            }
+            const userId = state.currentUserId || '用户';
+            const title = '用户分析｜' + userId + '｜' + state.currentUserNotes.note_count + '篇';
+            await downloadWord(title, state.currentUserNotes.ai_summary, userId, state.currentUserNotes.note_count);
+        }
+
+        async function downloadWord(title, content, keyword, noteCount) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ 生成中...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/xhs/export/word', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        content: content,
+                        keyword: keyword,
+                        note_count: noteCount
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    showError(err.message || 'Word导出失败');
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const filenameMatch = disposition.match(/filename\*=UTF-8''(.+)/);
+                a.download = filenameMatch ? decodeURIComponent(filenameMatch[1]) : '分析报告.docx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                showError('Word导出失败，请稍后重试');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         }
 
         async function exportZip(notes, name) {
@@ -2206,7 +2506,10 @@
             currentArticle: null,
             currentContent: null,
             currentNote: null,
-            aiAnalyzed: false
+            aiAnalyzed: false,
+            lastAnalysis: null,
+            generatedImageB64: null,
+            lastImagePrompt: null
         };
 
         function openXhsNoteSidebar(noteId, listId) {
@@ -2257,6 +2560,13 @@
             document.getElementById('sidebarAiToggleBtn').style.display = 'none';
             document.getElementById('sidebarAiBtn').disabled = false;
             document.getElementById('sidebarAiBtn').innerHTML = '<span>🧠</span> AI 舆情分析';
+            document.getElementById('sidebarAiPlaceholder').style.display = 'flex';
+            document.getElementById('sidebarGenImageBtn').disabled = true;
+            document.getElementById('sidebarGenImageBtn').innerHTML = '<span>🎨</span> 生成配图';
+            document.getElementById('sidebarGenImage').style.display = 'none';
+            document.getElementById('genImageResult').innerHTML = '';
+            sidebarState.lastAnalysis = null;
+            sidebarState.generatedImageB64 = null;
 
             // Hide wechat-specific loading, show XHS content directly
             document.getElementById('sidebarContentLoading').style.display = 'none';
@@ -2381,6 +2691,7 @@
             document.getElementById('sidebarAiToggleBtn').style.display = 'none';
             document.getElementById('sidebarAiBtn').disabled = false;
             document.getElementById('sidebarAiBtn').innerHTML = '<span>🧠</span> AI 深度分析';
+            document.getElementById('sidebarAiPlaceholder').style.display = 'flex';
 
             // Reset content area
             document.getElementById('sidebarContentLoading').style.display = 'flex';
@@ -2532,14 +2843,14 @@
             const section = document.getElementById('sidebarAiSection');
             const loading = document.getElementById('sidebarAiLoading');
             const content = document.getElementById('sidebarAiContent');
+            const placeholder = document.getElementById('sidebarAiPlaceholder');
 
             btn.disabled = true;
             btn.innerHTML = '<span>⏳</span> 分析中...';
             section.style.display = 'block';
             loading.style.display = 'flex';
             content.innerHTML = '';
-
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (placeholder) placeholder.style.display = 'none';
 
             try {
                 var response;
@@ -2579,8 +2890,12 @@
 
                 if (data.code === 200 && data.data.analysis) {
                     sidebarState.aiAnalyzed = true;
+                    sidebarState.lastAnalysis = data.data.analysis;
                     btn.innerHTML = '<span>✅</span> 分析完成';
                     renderSidebarAITyping(data.data.analysis);
+                    // Enable generate image button
+                    document.getElementById('sidebarGenImageBtn').disabled = false;
+                    document.getElementById('sidebarGenImageBtn').title = '基于分析结果生成改进版配图';
                 } else {
                     content.innerHTML = '<p class="summary-fallback">AI 分析暂不可用，请稍后重试</p>';
                     btn.disabled = false;
@@ -2624,6 +2939,153 @@
                     contentEl.innerHTML = marked.parse(currentText);
                 }
             }, 15);
+        }
+
+        async function generateNoteImage() {
+            if (!sidebarState.aiAnalyzed || !sidebarState.lastAnalysis) {
+                showError('请先进行AI深度分析');
+                return;
+            }
+
+            const btn = document.getElementById('sidebarGenImageBtn');
+            const section = document.getElementById('sidebarGenImage');
+            const loading = document.getElementById('genImageLoading');
+            const result = document.getElementById('genImageResult');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 生成中...';
+            section.style.display = 'block';
+            loading.style.display = 'flex';
+            result.innerHTML = '';
+
+            try {
+                const note = sidebarState.currentNote || {};
+                const response = await fetch('/api/xhs/note/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        analysis: sidebarState.lastAnalysis,
+                        title: note.title || '',
+                        content: note.content || '',
+                        size: '1024x1024'
+                    })
+                });
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (data.code === 200 && data.data.image_base64) {
+                    btn.innerHTML = '<span>✅</span> 已生成';
+                    const promptText = data.data.prompt || '';
+                    result.innerHTML = `
+                        <img src="data:image/png;base64,${data.data.image_base64}" alt="AI生成配图">
+                        <div class="image-actions">
+                            <button onclick="downloadGenImage()">💾 下载图片</button>
+                            <button onclick="regenerateWithPrompt()">🔄 重新生成</button>
+                        </div>
+                        <div class="image-prompt-section">
+                            <label class="prompt-label">生成提示词（可编辑后重新生成）：</label>
+                            <textarea class="prompt-textarea" id="imagePromptEditor" rows="6">${promptText.replace(/`/g, '\\`')}</textarea>
+                            <button class="prompt-regen-btn" onclick="regenerateWithPrompt()">🎨 使用编辑后的提示词重新生成</button>
+                        </div>
+                    `;
+                    // Store for download
+                    sidebarState.generatedImageB64 = data.data.image_base64;
+                    sidebarState.lastImagePrompt = promptText;
+                } else {
+                    result.innerHTML = '<p style="color:#f87171;font-size:14px;">图片生成失败：' + (data.message || '未知错误') + '</p>';
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🎨</span> 生成配图';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                result.innerHTML = '<p style="color:#f87171;font-size:14px;">网络异常，图片生成失败</p>';
+                btn.disabled = false;
+                btn.innerHTML = '<span>🎨</span> 生成配图';
+            }
+        }
+
+        function downloadGenImage() {
+            if (!sidebarState.generatedImageB64) return;
+            const a = document.createElement('a');
+            a.href = 'data:image/png;base64,' + sidebarState.generatedImageB64;
+            const title = (sidebarState.currentNote && sidebarState.currentNote.title) || 'xhs_image';
+            a.download = 'AI配图_' + title.substring(0, 20) + '.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function regenerateImage() {
+            const btn = document.getElementById('sidebarGenImageBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<span>🎨</span> 生成配图';
+            generateNoteImage();
+        }
+
+        async function regenerateWithPrompt() {
+            const promptEditor = document.getElementById('imagePromptEditor');
+            const customPrompt = promptEditor ? promptEditor.value.trim() : '';
+
+            if (!customPrompt) {
+                showError('提示词不能为空');
+                return;
+            }
+
+            const btn = document.getElementById('sidebarGenImageBtn');
+            const section = document.getElementById('sidebarGenImage');
+            const loading = document.getElementById('genImageLoading');
+            const result = document.getElementById('genImageResult');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 生成中...';
+            loading.style.display = 'flex';
+
+            try {
+                const note = sidebarState.currentNote || {};
+                const response = await fetch('/api/xhs/note/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        analysis: sidebarState.lastAnalysis || '',
+                        title: note.title || '',
+                        content: note.content || '',
+                        size: '1024x1024',
+                        custom_prompt: customPrompt
+                    })
+                });
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (data.code === 200 && data.data.image_base64) {
+                    btn.innerHTML = '<span>✅</span> 已生成';
+                    const promptText = data.data.prompt || customPrompt;
+                    result.innerHTML = `
+                        <img src="data:image/png;base64,${data.data.image_base64}" alt="AI生成配图">
+                        <div class="image-actions">
+                            <button onclick="downloadGenImage()">💾 下载图片</button>
+                            <button onclick="regenerateWithPrompt()">🔄 重新生成</button>
+                        </div>
+                        <div class="image-prompt-section">
+                            <label class="prompt-label">生成提示词（可编辑后重新生成）：</label>
+                            <textarea class="prompt-textarea" id="imagePromptEditor" rows="6">${promptText.replace(/`/g, '\\`')}</textarea>
+                            <button class="prompt-regen-btn" onclick="regenerateWithPrompt()">🎨 使用编辑后的提示词重新生成</button>
+                        </div>
+                    `;
+                    sidebarState.generatedImageB64 = data.data.image_base64;
+                    sidebarState.lastImagePrompt = promptText;
+                } else {
+                    showError(data.message || '图片生成失败');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🎨</span> 生成配图';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                showError('网络异常，图片生成失败');
+                btn.disabled = false;
+                btn.innerHTML = '<span>🎨</span> 生成配图';
+            }
         }
 
         function toggleSidebarAi() {
@@ -2685,6 +3147,12 @@
                 </div>
             </div>
             <textarea class="settings-input" id="settingsXhsCookies" rows="4" placeholder="粘贴小红书 Cookie..."></textarea>
+            <div style="margin-top:10px;">
+                <button class="sidebar-action-btn primary" id="autoFetchCookieBtn" onclick="autoFetchXhsCookie()" style="font-size:13px;height:36px;padding:0 16px;">
+                    🤖 自动获取 Cookie（打开浏览器登录）
+                </button>
+                <span class="settings-note" id="fetchCookieStatus" style="margin-left:10px;"></span>
+            </div>
             <div class="settings-status" id="xhsStatus"></div>
         </div>
 
@@ -2810,6 +3278,60 @@
     }
 
     // === Settings Modal ===
+    async function saveCookieFromBar() {
+        const input = document.getElementById('cookieBarInput');
+        const status = document.getElementById('cookieBarStatus');
+        const btn = document.getElementById('cookieBarSaveBtn');
+        const cookie = input.value.trim();
+
+        if (!cookie) {
+            status.textContent = '⚠️ 请粘贴Cookie';
+            status.style.color = '#f59e0b';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '保存中...';
+
+        try {
+            const resp = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ xhs_cookies: cookie })
+            });
+            const data = await resp.json();
+
+            if (data.code === 200) {
+                status.textContent = '✅ 已保存';
+                status.style.color = '#10b981';
+                input.value = '';
+                input.placeholder = '✅ Cookie 已配置，可以开始搜索了';
+            } else {
+                status.textContent = '❌ 保存失败';
+                status.style.color = '#f87171';
+            }
+        } catch (e) {
+            status.textContent = '❌ 网络错误';
+            status.style.color = '#f87171';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '保存';
+        }
+    }
+
+    // Load cookie status on page load
+    (async function checkCookieStatus() {
+        try {
+            const resp = await fetch('/api/settings');
+            const data = await resp.json();
+            if (data.code === 200 && data.data.xhs_cookies_configured) {
+                document.getElementById('cookieBarInput').placeholder = '✅ Cookie 已配置（如需更新请粘贴新的）';
+                document.getElementById('cookieBarStatus').textContent = '✅';
+                document.getElementById('cookieBarStatus').style.color = '#10b981';
+            }
+        } catch(e) {}
+    })();
+
     function openSettingsModal() {
         document.getElementById('settingsOverlay').classList.add('open');
         document.getElementById('settingsModal').classList.add('open');
@@ -2819,6 +3341,43 @@
     function closeSettingsModal() {
         document.getElementById('settingsOverlay').classList.remove('open');
         document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    async function autoFetchXhsCookie() {
+        const btn = document.getElementById('autoFetchCookieBtn');
+        const status = document.getElementById('fetchCookieStatus');
+
+        btn.disabled = true;
+        btn.innerHTML = '⏳ 浏览器已打开，请登录小红书...';
+        status.textContent = '等待登录中（最多2分钟）...';
+        status.style.color = '#f59e0b';
+
+        try {
+            const resp = await fetch('/api/xhs/fetch-cookie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await resp.json();
+
+            if (data.code === 200) {
+                status.textContent = '✅ ' + data.message;
+                status.style.color = '#10b981';
+                document.getElementById('xhsStatus').textContent = '✅ 已配置';
+                document.getElementById('xhsStatus').className = 'settings-status ok';
+                document.getElementById('settingsXhsCookies').placeholder = '已通过自动登录获取';
+                // Auto close settings modal after success
+                setTimeout(function() { closeSettingsModal(); }, 1500);
+            } else {
+                status.textContent = '❌ ' + data.message;
+                status.style.color = '#f87171';
+            }
+        } catch (e) {
+            status.textContent = '❌ 请求失败，请重试';
+            status.style.color = '#f87171';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '🤖 自动获取 Cookie（打开浏览器登录）';
+        }
     }
 
     async function loadSettings() {

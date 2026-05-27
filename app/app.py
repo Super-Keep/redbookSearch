@@ -26,9 +26,12 @@ from clients.xhs_client import XhsClient, XhsCookieExpiredError
 from clients.llm_client import LLMClient
 from clients.wechat_article_client import WechatArticleClient
 from clients.feishu_doc_client import FeishuDocClient
+from clients.image_gen_client import ImageGenClient
 from services.xhs_search_service import XhsSearchService
 from utils.s3_util import S3Util
 from utils.klogger_util import logger
+from utils.word_export_util import export_analysis_to_word
+from utils.cookie_fetcher import fetch_and_save_xhs_cookie
 
 app = Flask(
     __name__,
@@ -245,6 +248,49 @@ def save_settings():
     except Exception:
         logger.error(f"Save settings failed: {traceback.format_exc()}")
         return jsonify({"code": 400, "message": "保存失败"}), 400
+
+
+@app.route("/api/xhs/fetch-cookie", methods=["POST"])
+def xhs_fetch_cookie():
+    """
+    Open a browser window for user to login to XHS and auto-fetch cookies.
+    This is a blocking call that waits for user to complete login (up to 2 minutes).
+
+    Response 200:
+        { "code": 200, "message": "Cookie获取成功", "data": { "cookie_length": 785 } }
+    """
+    import threading
+
+    try:
+        # Run in a thread to avoid blocking other requests
+        result = {"done": False, "data": None}
+
+        def _fetch():
+            result["data"] = fetch_and_save_xhs_cookie(headless=False, timeout=120)
+            result["done"] = True
+
+            # Reset XHS service to pick up new cookie
+            if result["data"] and result["data"].get("success"):
+                global _xhs_search_service
+                _xhs_search_service = None
+
+        thread = threading.Thread(target=_fetch)
+        thread.start()
+        thread.join(timeout=130)  # Wait up to 130s
+
+        if result["data"] and result["data"]["success"]:
+            return jsonify({
+                "code": 200,
+                "message": result["data"]["message"],
+                "data": {"cookie_length": result["data"].get("cookie_length", 0)}
+            }), 200
+        else:
+            msg = result["data"]["message"] if result["data"] else "操作超时"
+            return jsonify({"code": 400, "message": msg}), 400
+
+    except Exception:
+        logger.error(f"Fetch cookie failed: {traceback.format_exc()}")
+        return jsonify({"code": 400, "message": "获取Cookie失败"}), 400
 
 
 def _mask_value(value: str) -> str:
@@ -533,6 +579,81 @@ def xhs_export_zip():
         return jsonify({"code": 400, "message": "导出失败，请稍后重试"}), 400
 
 
+@app.route("/api/xhs/export/word", methods=["POST"])
+def xhs_export_word():
+    """
+    Export AI analysis summary as a Word (.docx) document download.
+
+    Request JSON:
+        title (str): Document title
+        content (str): AI summary content (markdown)
+        keyword (str): Search keyword
+        note_count (int): Number of notes analyzed
+
+    Response: .docx file download
+    """
+    from flask import Response
+    from urllib.parse import quote
+    import io
+
+    try:
+        data = request.get_json(force=True) or {}
+        title = data.get("title", "小红书分析报告").strip()
+        content = data.get("content", "").strip()
+        keyword = data.get("keyword", "").strip()
+        note_count = int(data.get("note_count", 0))
+
+        if not content:
+            return jsonify({"code": 400, "message": "content is required"}), 400
+
+        # Generate Word document to memory
+        from docx import Document as DocxDocument
+        from utils.word_export_util import _markdown_to_docx, _add_rich_text
+        from docx.shared import Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from datetime import datetime as dt
+
+        doc = DocxDocument()
+        style = doc.styles['Normal']
+        style.font.size = Pt(11)
+
+        # Title
+        title_para = doc.add_heading(title, level=0)
+        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Metadata
+        meta_text = f"关键词: {keyword} | 分析笔记数: {note_count} | 生成时间: {dt.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        meta_para = doc.add_paragraph(meta_text)
+        meta_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in meta_para.runs:
+            run.font.size = Pt(9)
+            run.font.color.rgb = RGBColor(128, 128, 128)
+
+        doc.add_paragraph("")
+        _markdown_to_docx(doc, content)
+
+        # Save to BytesIO
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        # Build filename
+        import re
+        safe_keyword = re.sub(r'[\\/:*?"<>|\n\r]+', '', keyword)[:20].strip()
+        filename = f"小红书分析_{safe_keyword}_{dt.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        encoded_filename = quote(filename)
+
+        return Response(
+            buffer.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+        )
+
+    except Exception:
+        logger.error(f"Word export failed: {traceback.format_exc()}")
+        return jsonify({"code": 400, "message": "Word导出失败"}), 400
+
+
 @app.route("/api/xhs/export/csv", methods=["GET"])
 def xhs_export_csv():
     """Export search results as CSV file download."""
@@ -720,6 +841,136 @@ def xhs_note_analyze():
     except Exception:
         logger.error(f"XHS note analyze failed: {traceback.format_exc()}")
         return jsonify({"code": 400, "message": "AI 分析失败，请稍后重试"}), 400
+
+
+def _generate_image_prompt_with_llm(
+    analysis: str,
+    title: str,
+    content: str,
+    style_hints: str = ""
+) -> str:
+    """
+    Use LLM to understand the note's visual intent and generate
+    a high-quality image generation prompt.
+    """
+    try:
+        service = get_xhs_search_service()
+
+        system_prompt = (
+            "你是一位专业的AI图片生成提示词工程师。\n"
+            "你的任务是根据小红书笔记的内容和AI分析结果，生成一个精准的英文图片生成提示词(prompt)。\n\n"
+            "规则：\n"
+            "1. 先理解这篇笔记的**视觉意图**：它想要什么样的配图？\n"
+            "   - 知识卡片类 → 生成信息图/卡片风格的视觉设计\n"
+            "   - 生活方式类 → 生成氛围感照片\n"
+            "   - 教程类 → 生成步骤图/示意图\n"
+            "   - 产品种草类 → 生成产品展示图\n"
+            "   - 美食类 → 生成美食摄影\n"
+            "2. 根据AI分析中提到的**好的视觉元素**保留，**不好的地方**改进\n"
+            "3. 输出一段英文prompt，直接可用于图片生成模型\n"
+            "4. prompt要具体描述：构图、色彩、风格、主体、氛围、光线\n"
+            "5. 必须包含：NO text, NO watermarks, NO words\n"
+            "6. 只输出prompt本身，不要任何解释\n"
+        )
+
+        user_prompt = (
+            f"笔记标题：{title}\n"
+            f"笔记内容：{content[:800]}\n\n"
+            f"AI分析要点：{analysis[:800]}\n"
+            f"{'额外风格要求：' + style_hints if style_hints else ''}\n\n"
+            f"请生成图片prompt："
+        )
+
+        prompt = service.llm_client.complete(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            temperature=0.7
+        )
+
+        # Clean up - remove quotes if LLM wrapped it
+        prompt = prompt.strip().strip('"').strip("'").strip("`")
+        logger.info(f"LLM generated image prompt: {prompt[:100]}...")
+        return prompt
+
+    except Exception:
+        logger.warning(f"LLM prompt generation failed, using fallback: {traceback.format_exc()}")
+        # Fallback to simple prompt
+        return (
+            f"Create a beautiful image for a social media post about: {title}. "
+            f"Style: clean, aesthetic, trendy, appealing to young women. "
+            f"NO text, NO watermarks."
+        )
+
+
+@app.route("/api/xhs/note/generate-image", methods=["POST"])
+def xhs_note_generate_image():
+    """
+    Generate an improved XHS-style image based on AI analysis results.
+    Uses LLM to create optimized prompt, then gpt-image-2 to generate.
+    """
+    try:
+        data = request.get_json(force=True) or {}
+        analysis = data.get("analysis", "").strip()
+        title = data.get("title", "").strip()
+        content = data.get("content", "").strip()
+        style_hints = data.get("style_hints", "").strip()
+        size = data.get("size", "1024x1024")
+
+        if not analysis:
+            return jsonify({"code": 400, "message": "analysis is required (先进行AI深度分析)"}), 400
+
+        if size not in ("1024x1024", "1024x1536", "1536x1024"):
+            size = "1024x1024"
+
+        # Initialize image client with same API key
+        image_client = ImageGenClient(
+            api_key=CONFIG.LLM_CONFIG.API_KEY,
+            api_url=CONFIG.LLM_CONFIG.API_URL
+        )
+
+        # Check if user provided a custom prompt (for regeneration)
+        custom_prompt = data.get("custom_prompt", "").strip()
+
+        if custom_prompt:
+            prompt = custom_prompt
+        else:
+            # Use LLM to generate an optimized image prompt based on analysis
+            prompt = _generate_image_prompt_with_llm(
+                analysis=analysis,
+                title=title,
+                content=content,
+                style_hints=style_hints
+            )
+
+        # Generate and save
+        filepath = image_client.generate_and_save_with_prompt(
+            prompt=prompt,
+            title=title,
+            size=size
+        )
+
+        if not filepath:
+            return jsonify({"code": 400, "message": "图片生成失败，请稍后重试"}), 400
+
+        # Also return base64 for frontend display
+        import base64
+        with open(filepath, "rb") as f:
+            image_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "image_base64": image_b64,
+                "saved_path": filepath,
+                "size": size,
+                "prompt": prompt,
+            }
+        }), 200
+
+    except Exception:
+        logger.error(f"Image generation failed: {traceback.format_exc()}")
+        return jsonify({"code": 400, "message": "图片生成失败，请稍后重试"}), 400
+
 
 # ── WeChat API Endpoints ──────────────────────────────────────────────────────
 
@@ -1059,7 +1310,7 @@ def _auto_sync_to_feishu(
     source: str = "xhs_search"
 ) -> None:
     """
-    Auto-sync AI analysis to Feishu document (non-blocking, fail-silent).
+    Auto-sync AI analysis to Feishu document and export Word file (non-blocking, fail-silent).
 
     :param keyword: Search keyword (used in document title)
     :param ai_summary: AI generated summary content (markdown)
@@ -1071,12 +1322,6 @@ def _auto_sync_to_feishu(
 
     def _sync():
         try:
-            config = _get_feishu_config()
-            if not config["app_id"] or not config["app_secret"]:
-                return  # Feishu not configured, skip silently
-
-            client = get_feishu_doc_client()
-
             # Build document title
             timestamp = dt.now().strftime("%m-%d %H:%M")
             if source == "xhs_search":
@@ -1086,21 +1331,40 @@ def _auto_sync_to_feishu(
             else:
                 title = f"内容分析｜{keyword}｜{timestamp}"
 
-            result = client.sync_analysis_to_doc(title=title, content=ai_summary)
+            # 1. Export Word document locally
+            try:
+                word_path = export_analysis_to_word(
+                    title=title,
+                    content=ai_summary,
+                    keyword=keyword,
+                    note_count=note_count
+                )
+                logger.info(f"Word document exported, keyword={keyword}, path={word_path}")
+            except Exception:
+                logger.warning(f"Word export failed: {traceback.format_exc()}")
 
-            if result["success"]:
-                logger.info(
-                    f"Auto-synced to Feishu, keyword={keyword}, "
-                    f"url={result['url']}"
-                )
-            else:
-                logger.warning(
-                    f"Auto-sync to Feishu failed, keyword={keyword}, "
-                    f"error={result.get('error', 'unknown')}"
-                )
+            # 2. Sync to Feishu (if configured)
+            try:
+                config = _get_feishu_config()
+                if config["app_id"] and config["app_secret"]:
+                    client = get_feishu_doc_client()
+                    result = client.sync_analysis_to_doc(title=title, content=ai_summary)
+
+                    if result["success"]:
+                        logger.info(
+                            f"Auto-synced to Feishu, keyword={keyword}, "
+                            f"url={result['url']}"
+                        )
+                    else:
+                        logger.warning(
+                            f"Auto-sync to Feishu failed, keyword={keyword}, "
+                            f"error={result.get('error', 'unknown')}"
+                        )
+            except Exception:
+                logger.warning(f"Auto-sync to Feishu error: {traceback.format_exc()}")
 
         except Exception:
-            logger.warning(f"Auto-sync to Feishu error: {traceback.format_exc()}")
+            logger.warning(f"Auto-sync error: {traceback.format_exc()}")
 
     # Run in background thread to not block the response
     thread = threading.Thread(target=_sync, daemon=True)
